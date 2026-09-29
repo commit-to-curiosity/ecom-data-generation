@@ -4,19 +4,16 @@ import com.shopsphere.datagen.common.config.ConfigLoader
 import com.shopsphere.datagen.customer.config.{AgeBandConfig, CustomerDemographicsConfig, GenderDistributionConfig}
 import com.typesafe.config.Config
 
-class CustomerDemographicsLoader(ageBandLoader: ConfigLoader[Seq[AgeBandConfig]])
+class CustomerDemographicsLoader(
+                                  ageBandLoader: ConfigLoader[Seq[AgeBandConfig]],
+                                genderDistributionLoader: ConfigLoader[GenderDistributionConfig])
   extends ConfigLoader[CustomerDemographicsConfig] {
 
   override def load(config: Config): CustomerDemographicsConfig = {
-    val gender = config.getConfig("gender")
 
     CustomerDemographicsConfig(
       ageBands = ageBandLoader.load(config),
-      gender = GenderDistributionConfig(
-        male = gender.getDouble("male"),
-        female = gender.getDouble("female"),
-        other = gender.getDouble("other")
-      )
+      gender = genderDistributionLoader.load(config)
     )
   }
 }
