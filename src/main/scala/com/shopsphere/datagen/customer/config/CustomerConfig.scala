@@ -5,5 +5,5 @@ case class CustomerConfig(
                            lifecycle: CustomerLifecycleConfig,
                            status: CustomerStatusConfig,
                            segment: CustomerSegmentConfig,
-                           acquisition: AcquisitionConfig
+                           acquisition: CustomerAcquisitionConfig
                          )

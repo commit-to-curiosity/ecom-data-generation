@@ -1,7 +1,7 @@
 package com.shopsphere.datagen.customer.loader
 
 import com.shopsphere.datagen.common.config.{ConfigLoader, LoaderRegistry}
-import com.shopsphere.datagen.customer.config.{AcquisitionConfig, AgeBandConfig, CustomerConfig, CustomerDemographicsConfig, CustomerLifecycleConfig, CustomerSegmentConfig, CustomerStatusConfig}
+import com.shopsphere.datagen.customer.config.{CustomerAcquisitionConfig, CustomerConfig, CustomerDemographicsConfig, CustomerLifecycleConfig, CustomerSegmentConfig, CustomerStatusConfig}
 import com.typesafe.config.Config
 
 class CustomerConfigLoader(
@@ -10,11 +10,10 @@ class CustomerConfigLoader(
 
   override def load(config: Config): CustomerConfig = {
     val demographicsLoader = registry.get[CustomerDemographicsConfig]
-    val ageBandLoader = registry.get[Seq[AgeBandConfig]]
     val lifecycleLoader = registry.get[CustomerLifecycleConfig]
     val statusLoader = registry.get[CustomerStatusConfig]
     val segmentLoader = registry.get[CustomerSegmentConfig]
-    val acquisitionLoader = registry.get[AcquisitionConfig]
+    val acquisitionLoader = registry.get[CustomerAcquisitionConfig]
 
     val customerConfig = config.getConfig("customer")
 

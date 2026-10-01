@@ -1,6 +1,6 @@
 package com.shopsphere.datagen.customer.config
 
-case class GenderDistributionConfig(
+case class CustomerGenderConfig(
                                      male: Double,
                                      female: Double,
                                      other: Double

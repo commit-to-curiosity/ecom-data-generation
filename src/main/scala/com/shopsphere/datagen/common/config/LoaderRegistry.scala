@@ -1,10 +1,11 @@
 package com.shopsphere.datagen.common.config
 
+import scala.collection.mutable
 import scala.reflect.runtime.universe.TypeTag
 
 class LoaderRegistry {
 
-  private val loaders = scala.collection.mutable.Map[String, ConfigLoader[_]]()
+  private val loaders = mutable.Map[String, ConfigLoader[_]]()
 
   def register[T: TypeTag](loader: ConfigLoader[T]): Unit = {
     val key = typeKey[T]
@@ -33,4 +34,5 @@ class LoaderRegistry {
 
   private def typeKey[T: TypeTag]: String =
     implicitly[TypeTag[T]].tpe.toString
+
 }

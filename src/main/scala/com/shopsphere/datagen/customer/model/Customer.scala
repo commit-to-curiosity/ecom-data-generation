@@ -1,10 +1,6 @@
-package com.shopsphere.datagen.customer
+package com.shopsphere.datagen.customer.model
 
 import java.time.LocalDate
-
-import com.shopsphere.datagen.customer.model.CustomerSegment
-import com.shopsphere.datagen.customer.model.CustomerStatus
-import com.shopsphere.datagen.customer.model.Gender
 
 case class Customer(
                      id: Long,

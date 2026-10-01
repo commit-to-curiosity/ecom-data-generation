@@ -1,10 +1,10 @@
 package com.shopsphere.datagen.common.distribution
 
-import scala.util.Random
+import com.shopsphere.datagen.common.random.RandomGenerator
 
 class WeightedDistribution[T](
                                values: Seq[(T, Double)],
-                               random: Random
+                               random: RandomGenerator
                              ) extends Distribution[T] {
 
   require(values.nonEmpty, "Weighted distribution must contain at least one value")

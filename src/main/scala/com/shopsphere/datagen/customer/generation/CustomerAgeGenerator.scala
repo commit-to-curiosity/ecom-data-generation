@@ -2,25 +2,26 @@ package com.shopsphere.datagen.customer.generation
 
 import com.shopsphere.datagen.common.distribution.WeightedDistribution
 import com.shopsphere.datagen.common.generation.Generator
-import com.shopsphere.datagen.customer.config.AgeBandConfig
-
-import scala.util.Random
+import com.shopsphere.datagen.common.random.RandomGenerator
+import com.shopsphere.datagen.customer.config.CustomerAgeBandConfig
 
 class CustomerAgeGenerator(
-                            ageBands: Seq[AgeBandConfig],
-                            random: Random
+                            ageBands: Seq[CustomerAgeBandConfig],
+                            random: RandomGenerator
                           ) extends Generator[Int] {
 
-  private val distribution =
-    new WeightedDistribution[AgeBandConfig](
+  private val ageBandDistribution =
+    new WeightedDistribution(
       ageBands.map(ageBand => ageBand -> ageBand.weight),
       random
     )
 
   override def generate(): Int = {
-    val ageBand = distribution.sample()
+    val ageBand = ageBandDistribution.sample()
 
-    ageBand.minAge +
-      random.nextInt(ageBand.maxAge - ageBand.minAge + 1)
+    random.nextInt(
+      ageBand.minAge,
+      ageBand.maxAge
+    )
   }
 }

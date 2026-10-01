@@ -1,7 +1,4 @@
-package com.shopsphere.datagen.customer
-
-import com.shopsphere.datagen.customer.model.AcquisitionChannel
-import com.shopsphere.datagen.customer.model.AcquisitionCampaign
+package com.shopsphere.datagen.customer.model
 
 case class CustomerAcquisition(
                                 channel: AcquisitionChannel,
