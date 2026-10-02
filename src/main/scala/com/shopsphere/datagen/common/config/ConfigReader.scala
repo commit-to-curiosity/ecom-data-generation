@@ -2,6 +2,6 @@ package com.shopsphere.datagen.common.config
 
 import com.typesafe.config.Config
 
-trait ConfigLoader[T] {
-  def loadConfiguration(config: Config): T
+trait ConfigReader {
+  def readConfigFile: Config
 }

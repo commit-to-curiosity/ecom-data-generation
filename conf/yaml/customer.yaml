@@ -1,0 +1,88 @@
+customer:
+  demographics:
+    age_bands:
+      - min_age: 18
+        max_age: 24
+        weight: 0.10
+      - min_age: 25
+        max_age: 34
+        weight: 0.25
+      - min_age: 35
+        max_age: 44
+        weight: 0.30
+      - min_age: 45
+        max_age: 54
+        weight: 0.20
+      - min_age: 55
+        max_age: 64
+        weight: 0.10
+      - min_age: 65
+        max_age: 80
+        weight: 0.05
+
+    gender:
+      male: 0.50
+      female: 0.47
+      other: 0.03
+
+  lifecycle:
+    as_of_date: "2026-01-01"
+    registration_history_days: 3650
+
+  status:
+    active: 0.92
+    inactive: 0.05
+    suspended: 0.02
+    closed: 0.01
+
+  segment:
+    standard: 0.70
+    premium: 0.20
+    vip: 0.08
+    business: 0.02
+
+  acquisition:
+    channel:
+      organic: 0.35
+      paid_search: 0.20
+      social: 0.15
+      email: 0.10
+      direct: 0.15
+      referral: 0.05
+
+    campaign:
+      organic:
+        seo: 0.70
+        content: 0.30
+
+      paid_search:
+        brand: 0.40
+        generic: 0.60
+
+      social:
+        instagram: 0.40
+        facebook: 0.35
+        youtube: 0.25
+
+      email:
+        newsletter: 0.60
+        promotion: 0.40
+
+      direct:
+        none: 1.00
+
+      referral:
+        customer_referral: 1.00
+
+  behavior:
+    preferred_device:
+      mobile: 0.70
+      desktop: 0.25
+      tablet: 0.05
+
+    preferred_payment_method:
+      upi: 0.45
+      credit_card: 0.20
+      debit_card: 0.15
+      net_banking: 0.10
+      wallet: 0.10

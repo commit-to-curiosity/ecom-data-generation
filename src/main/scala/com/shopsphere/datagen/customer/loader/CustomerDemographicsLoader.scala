@@ -1,36 +1,23 @@
 package com.shopsphere.datagen.customer.loader
 
-import com.shopsphere.datagen.common.config.ConfigLoader
-import com.shopsphere.datagen.customer.config.{AgeBandConfig, CustomerDemographicsConfig, GenderDistributionConfig}
+import com.shopsphere.datagen.common.config.{ConfigLoader, DataGenerationConstants}
+import com.shopsphere.datagen.customer.config.CustomerDemographicsConfig
 import com.typesafe.config.Config
 
-import scala.jdk.CollectionConverters._
+class CustomerDemographicsLoader(
+                                  genderLoader: CustomerGenderLoader,
+                                  ageBandLoader: CustomerAgeBandLoader
+                                ) extends ConfigLoader[CustomerDemographicsConfig] {
 
-class CustomerDemographicsLoader
-  extends ConfigLoader[CustomerDemographicsConfig] {
+  override def loadConfiguration(config: Config): CustomerDemographicsConfig = {
 
-  override def load(config: Config): CustomerDemographicsConfig = {
-    val ageBands = config
-      .getConfigList("age_bands")
-      .asScala
-      .map { ageBand =>
-        AgeBandConfig(
-          minAge = ageBand.getInt("min_age"),
-          maxAge = ageBand.getInt("max_age"),
-          weight = ageBand.getDouble("weight")
-        )
-      }
-      .toSeq
+    val genderConfig = genderLoader.loadConfiguration(config.getConfig(DataGenerationConstants.GENDER))
 
-    val gender = config.getConfig("gender")
+    val ageBandsConfig = ageBandLoader.loadConfiguration(config)
 
     CustomerDemographicsConfig(
-      ageBands = ageBands,
-      gender = GenderDistributionConfig(
-        male = gender.getDouble("male"),
-        female = gender.getDouble("female"),
-        other = gender.getDouble("other")
-      )
+      ageBands = ageBandsConfig,
+      gender = genderConfig
     )
   }
 }

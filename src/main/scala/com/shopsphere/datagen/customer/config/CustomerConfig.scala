@@ -3,7 +3,8 @@ package com.shopsphere.datagen.customer.config
 case class CustomerConfig(
                            demographics: CustomerDemographicsConfig,
                            lifecycle: CustomerLifecycleConfig,
-                           status: CustomerStatusConfig,
                            segment: CustomerSegmentConfig,
-                           acquisition: AcquisitionConfig
+                           status: CustomerStatusConfig,
+                           acquisition: CustomerAcquisitionConfig,
+                           behavior: CustomerBehaviorConfig
                          )

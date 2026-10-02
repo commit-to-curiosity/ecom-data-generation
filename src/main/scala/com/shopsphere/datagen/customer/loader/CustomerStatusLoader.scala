@@ -1,18 +1,19 @@
 package com.shopsphere.datagen.customer.loader
 
 import com.shopsphere.datagen.common.config.ConfigLoader
+import com.shopsphere.datagen.common.enums.CustomerStatus
 import com.shopsphere.datagen.customer.config.CustomerStatusConfig
 import com.typesafe.config.Config
 
-class CustomerStatusLoader
-  extends ConfigLoader[CustomerStatusConfig] {
+class CustomerStatusLoader extends ConfigLoader[CustomerStatusConfig] {
 
-  override def load(config: Config): CustomerStatusConfig = {
+  override def loadConfiguration(config: Config): CustomerStatusConfig = {
+
     CustomerStatusConfig(
-      active = config.getDouble("active"),
-      inactive = config.getDouble("inactive"),
-      suspended = config.getDouble("suspended"),
-      closed = config.getDouble("closed")
+      active = config.getDouble(CustomerStatus.ACTIVE.name),
+      inactive = config.getDouble(CustomerStatus.INACTIVE.name),
+      suspended = config.getDouble(CustomerStatus.SUSPENDED.name),
+      closed = config.getDouble(CustomerStatus.CLOSED.name)
     )
   }
 }
