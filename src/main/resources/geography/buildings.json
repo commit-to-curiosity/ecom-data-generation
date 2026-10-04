@@ -1,0 +1,81 @@
+{
+  "buildings": [
+    {
+      "id": "BUILDING_001",
+      "name": "A",
+      "society_id": "SOCIETY_001",
+      "floors": 8,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_002",
+      "name": "B",
+      "society_id": "SOCIETY_001",
+      "floors": 10,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_003",
+      "name": "A",
+      "society_id": "SOCIETY_002",
+      "floors": 12,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_004",
+      "name": "A",
+      "society_id": "SOCIETY_003",
+      "floors": 15,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_005",
+      "name": "B",
+      "society_id": "SOCIETY_003",
+      "floors": 12,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_006",
+      "name": "A",
+      "society_id": "SOCIETY_004",
+      "floors": 8,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_007",
+      "name": "A",
+      "society_id": "SOCIETY_005",
+      "floors": 12,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_008",
+      "name": "A",
+      "society_id": "SOCIETY_006",
+      "floors": 6,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_009",
+      "name": "A",
+      "society_id": "SOCIETY_007",
+      "floors": 10,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_010",
+      "name": "A",
+      "society_id": "SOCIETY_008",
+      "floors": 8,
+      "units_per_floor": 4
+    },
+    {
+      "id": "BUILDING_011",
+      "name": "A",
+      "society_id": "SOCIETY_009",
+      "floors": 12,
+      "units_per_floor": 4
+    }
+  ]
+}

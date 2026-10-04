@@ -1,0 +1,36 @@
+{
+  "postal_codes": [
+    {
+      "code": "400093",
+      "area_id": "AREA_001"
+    },
+    {
+      "code": "400076",
+      "area_id": "AREA_002"
+    },
+    {
+      "code": "411038",
+      "area_id": "AREA_003"
+    },
+    {
+      "code": "411057",
+      "area_id": "AREA_004"
+    },
+    {
+      "code": "440010",
+      "area_id": "AREA_005"
+    },
+    {
+      "code": "380015",
+      "area_id": "AREA_006"
+    },
+    {
+      "code": "395009",
+      "area_id": "AREA_007"
+    },
+    {
+      "code": "560066",
+      "area_id": "AREA_008"
+    }
+  ]
+}

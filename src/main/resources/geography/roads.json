@@ -1,0 +1,49 @@
+{
+  "roads": [
+    {
+      "id": "ROAD_001",
+      "name": "Mahakali Caves Road",
+      "area_id": "AREA_001"
+    },
+    {
+      "id": "ROAD_002",
+      "name": "Andheri Kurla Road",
+      "area_id": "AREA_001"
+    },
+    {
+      "id": "ROAD_003",
+      "name": "Hiranandani Gardens Road",
+      "area_id": "AREA_002"
+    },
+    {
+      "id": "ROAD_004",
+      "name": "Paud Road",
+      "area_id": "AREA_003"
+    },
+    {
+      "id": "ROAD_005",
+      "name": "Hinjewadi Road",
+      "area_id": "AREA_004"
+    },
+    {
+      "id": "ROAD_006",
+      "name": "North Ambazari Road",
+      "area_id": "AREA_005"
+    },
+    {
+      "id": "ROAD_007",
+      "name": "Vastrapur Road",
+      "area_id": "AREA_006"
+    },
+    {
+      "id": "ROAD_008",
+      "name": "Adajan Road",
+      "area_id": "AREA_007"
+    },
+    {
+      "id": "ROAD_009",
+      "name": "Whitefield Main Road",
+      "area_id": "AREA_008"
+    }
+  ]
+}

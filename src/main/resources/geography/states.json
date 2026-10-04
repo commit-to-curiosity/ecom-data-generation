@@ -1,0 +1,19 @@
+{
+  "states": [
+    {
+      "id": "STATE_001",
+      "name": "Maharashtra",
+      "country_id": "COUNTRY_001"
+    },
+    {
+      "id": "STATE_002",
+      "name": "Gujarat",
+      "country_id": "COUNTRY_001"
+    },
+    {
+      "id": "STATE_003",
+      "name": "Karnataka",
+      "country_id": "COUNTRY_001"
+    }
+  ]
+}

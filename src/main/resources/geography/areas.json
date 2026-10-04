@@ -1,0 +1,44 @@
+{
+  "areas": [
+    {
+      "id": "AREA_001",
+      "name": "Andheri East",
+      "city_id": "CITY_001"
+    },
+    {
+      "id": "AREA_002",
+      "name": "Powai",
+      "city_id": "CITY_001"
+    },
+    {
+      "id": "AREA_003",
+      "name": "Kothrud",
+      "city_id": "CITY_002"
+    },
+    {
+      "id": "AREA_004",
+      "name": "Hinjewadi",
+      "city_id": "CITY_002"
+    },
+    {
+      "id": "AREA_005",
+      "name": "Dharampeth",
+      "city_id": "CITY_003"
+    },
+    {
+      "id": "AREA_006",
+      "name": "Vastrapur",
+      "city_id": "CITY_004"
+    },
+    {
+      "id": "AREA_007",
+      "name": "Adajan",
+      "city_id": "CITY_005"
+    },
+    {
+      "id": "AREA_008",
+      "name": "Whitefield",
+      "city_id": "CITY_006"
+    }
+  ]
+}

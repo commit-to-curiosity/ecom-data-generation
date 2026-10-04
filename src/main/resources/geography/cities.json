@@ -1,0 +1,34 @@
+{
+  "cities": [
+    {
+      "id": "CITY_001",
+      "name": "Mumbai",
+      "state_id": "STATE_001"
+    },
+    {
+      "id": "CITY_002",
+      "name": "Pune",
+      "state_id": "STATE_001"
+    },
+    {
+      "id": "CITY_003",
+      "name": "Nagpur",
+      "state_id": "STATE_001"
+    },
+    {
+      "id": "CITY_004",
+      "name": "Ahmedabad",
+      "state_id": "STATE_002"
+    },
+    {
+      "id": "CITY_005",
+      "name": "Surat",
+      "state_id": "STATE_002"
+    },
+    {
+      "id": "CITY_006",
+      "name": "Bengaluru",
+      "state_id": "STATE_003"
+    }
+  ]
+}

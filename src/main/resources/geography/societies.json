@@ -1,0 +1,49 @@
+{
+  "societies": [
+    {
+      "id": "SOCIETY_001",
+      "name": "Mahakali Residency",
+      "road_id": "ROAD_001"
+    },
+    {
+      "id": "SOCIETY_002",
+      "name": "Andheri Heights",
+      "road_id": "ROAD_002"
+    },
+    {
+      "id": "SOCIETY_003",
+      "name": "Hiranandani Gardens",
+      "road_id": "ROAD_003"
+    },
+    {
+      "id": "SOCIETY_004",
+      "name": "Kothrud Residency",
+      "road_id": "ROAD_004"
+    },
+    {
+      "id": "SOCIETY_005",
+      "name": "Hinjewadi Heights",
+      "road_id": "ROAD_005"
+    },
+    {
+      "id": "SOCIETY_006",
+      "name": "Dharampeth Residency",
+      "road_id": "ROAD_006"
+    },
+    {
+      "id": "SOCIETY_007",
+      "name": "Vastrapur Heights",
+      "road_id": "ROAD_007"
+    },
+    {
+      "id": "SOCIETY_008",
+      "name": "Adajan Residency",
+      "road_id": "ROAD_008"
+    },
+    {
+      "id": "SOCIETY_009",
+      "name": "Whitefield Residency",
+      "road_id": "ROAD_009"
+    }
+  ]
+}
