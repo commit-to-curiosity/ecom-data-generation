@@ -1,7 +1,8 @@
-package com.shopsphere.datagen.customer.loader.acquisition
+package com.shopsphere.datagen.customer.loader
 
 import com.shopsphere.datagen.common.config.{ConfigLoader, DataGenerationConstants}
 import com.shopsphere.datagen.customer.config.CustomerAcquisitionConfig
+import com.shopsphere.datagen.customer.loader.{CustomerAcquisitionCampaignLoader, CustomerAcquisitionChannelLoader}
 import com.typesafe.config.Config
 
 class CustomerAcquisitionLoader(

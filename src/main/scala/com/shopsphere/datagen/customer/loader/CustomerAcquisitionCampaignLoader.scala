@@ -1,4 +1,4 @@
-package com.shopsphere.datagen.customer.loader.acquisition
+package com.shopsphere.datagen.customer.loader
 
 import com.shopsphere.datagen.common.config.ConfigLoader
 import com.shopsphere.datagen.common.enums.CustomerAcquisitionChannel

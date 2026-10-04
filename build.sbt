@@ -9,6 +9,9 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "com.typesafe" % "config" % "1.4.3",
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.0",
+      "net.datafaker" % "datafaker" % "2.5.2",
+      "org.apache.logging.log4j" % "log4j-api" % "2.26.1",
+      "org.apache.logging.log4j" % "log4j-core" % "2.26.1",
       "org.scalatest" %% "scalatest" % "3.2.19" % Test,
       "com.fasterxml.jackson.dataformat" % "jackson-dataformat-yaml" % "2.20.0"
     ),

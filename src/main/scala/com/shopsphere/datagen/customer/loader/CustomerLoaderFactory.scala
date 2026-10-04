@@ -1,6 +1,5 @@
 package com.shopsphere.datagen.customer.loader
 
-import com.shopsphere.datagen.customer.loader.acquisition.{CustomerAcquisitionCampaignLoader, CustomerAcquisitionChannelLoader, CustomerAcquisitionLoader}
 import com.shopsphere.datagen.customer.loader.behavior.CustomerBehaviorLoader
 
 object CustomerLoaderFactory {
@@ -33,7 +32,6 @@ object CustomerLoaderFactory {
       preferredDeviceLoader,
       preferredPaymentMethodLoader
     )
-
 
     new CustomerConfigLoader(
       demographicsLoader,

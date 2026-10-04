@@ -2,7 +2,7 @@ package com.shopsphere.datagen.customer.loader
 
 import com.shopsphere.datagen.common.config.{ConfigLoader, DataGenerationConstants}
 import com.shopsphere.datagen.customer.config.{CustomerConfig, CustomerDemographicsConfig}
-import com.shopsphere.datagen.customer.loader.acquisition.CustomerAcquisitionLoader
+import com.shopsphere.datagen.customer.loader.CustomerAcquisitionLoader
 import com.shopsphere.datagen.customer.loader.behavior.CustomerBehaviorLoader
 import com.typesafe.config.Config
 
