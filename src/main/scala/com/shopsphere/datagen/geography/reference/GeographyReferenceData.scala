@@ -37,6 +37,9 @@ class GeographyReferenceData(
   val postalCodesByCode: Map[String, PostalCode] =
     postalCodes.map(postalCode => postalCode.code -> postalCode).toMap
 
+  val postalCodesByAreaId: Map[String, Seq[PostalCode]] =
+    postalCodes.groupBy(_.areaId)
+
   def findCountry(countryId: String): Option[Country] =
     countriesById.get(countryId)
 
@@ -60,6 +63,9 @@ class GeographyReferenceData(
 
   def findPostalCode(code: String): Option[PostalCode] =
     postalCodesByCode.get(code)
+
+  def findPostalCodesByArea(areaId: String): Seq[PostalCode] =
+    postalCodesByAreaId.getOrElse(areaId, Seq.empty)
 
   def resolveBuilding(buildingId: String): Option[BuildingLocation] = {
     for {
