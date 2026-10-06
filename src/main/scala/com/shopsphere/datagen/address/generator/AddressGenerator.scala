@@ -3,8 +3,8 @@ package com.shopsphere.datagen.address.generator
 import com.shopsphere.datagen.address.model.Address
 import com.shopsphere.datagen.common.distribution.{RandomGenerator, UniformDistribution}
 import com.shopsphere.datagen.common.generator.Generator
-import com.shopsphere.datagen.geography.model.Building
-import com.shopsphere.datagen.geography.reference.GeographyReferenceData
+import com.shopsphere.datagen.geography.model.{Building, PostalCode}
+import com.shopsphere.datagen.geography.reference.{BuildingLocation, GeographyReferenceData}
 
 class AddressGenerator(
                         customerId: String,
@@ -17,18 +17,17 @@ class AddressGenerator(
   private val buildings = geographyReferenceData.buildings
 
   override def generate(): Address = {
-    val building = new UniformDistribution(
+    val building: Building = new UniformDistribution(
       buildings,
       randomGenerator
     ).sample()
 
-    val location = geographyReferenceData
-      .resolveBuilding(building.id)
-      .get
+    val location: BuildingLocation = geographyReferenceData
+      .resolveBuilding(building.id).get
 
-    val unitNumber = generateUnitNumber(building)
+    val unitNumber: String = generateUnitNumber(building)
 
-    val postalCode = generatePostalCode(location.area.id)
+    val postalCode: String = generatePostalCode(location.area.id)
 
     Address(
       id = generateAddressId(),
@@ -46,13 +45,13 @@ class AddressGenerator(
   }
 
   private def generateUnitNumber(building: Building): String = {
-    val floor =
+    val floor: Int =
       new UniformDistribution(
         1 to building.floors,
         randomGenerator
       ).sample()
 
-    val unit =
+    val unit: Int =
       new UniformDistribution(
         1 to building.unitsPerFloor,
         randomGenerator
@@ -62,7 +61,7 @@ class AddressGenerator(
   }
 
   private def generatePostalCode(areaId: String): String = {
-    val postalCodes =
+    val postalCodes: Seq[PostalCode] =
       geographyReferenceData.findPostalCodesByArea(areaId)
 
     new UniformDistribution(
