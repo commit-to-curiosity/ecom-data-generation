@@ -1,6 +1,7 @@
 package com.shopsphere.datagen.geography.loader
 
 import com.shopsphere.datagen.common.json.JsonMapper
+import com.shopsphere.datagen.geography.model.{AreasData, BuildingsData, CitiesData, CountriesData, PostalCodesData, RoadsData, SocietiesData, StatesData}
 import com.shopsphere.datagen.geography.reference.GeographyReferenceData
 
 import java.io.InputStream

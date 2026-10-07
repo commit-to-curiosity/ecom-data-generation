@@ -1,6 +1,4 @@
-package com.shopsphere.datagen.geography.loader
-
-import com.shopsphere.datagen.geography.model._
+package com.shopsphere.datagen.geography.model
 
 case class CountriesData(countries: Seq[Country])
 

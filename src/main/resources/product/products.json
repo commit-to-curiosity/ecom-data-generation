@@ -1,0 +1,74 @@
+{
+  "products": [
+    {
+      "id": "PROD_001",
+      "name": "Wireless Earbuds",
+      "category": "electronics",
+      "brand": "SoundMax",
+      "price": 2499.00
+    },
+    {
+      "id": "PROD_002",
+      "name": "Bluetooth Speaker",
+      "category": "electronics",
+      "brand": "SoundMax",
+      "price": 3499.00
+    },
+    {
+      "id": "PROD_003",
+      "name": "Mechanical Keyboard",
+      "category": "electronics",
+      "brand": "KeyPro",
+      "price": 4599.00
+    },
+    {
+      "id": "PROD_004",
+      "name": "Running Shoes",
+      "category": "footwear",
+      "brand": "Stride",
+      "price": 2999.00
+    },
+    {
+      "id": "PROD_005",
+      "name": "Casual Sneakers",
+      "category": "footwear",
+      "brand": "Stride",
+      "price": 2499.00
+    },
+    {
+      "id": "PROD_006",
+      "name": "Cotton T-Shirt",
+      "category": "clothing",
+      "brand": "UrbanWear",
+      "price": 799.00
+    },
+    {
+      "id": "PROD_007",
+      "name": "Denim Jeans",
+      "category": "clothing",
+      "brand": "UrbanWear",
+      "price": 1999.00
+    },
+    {
+      "id": "PROD_008",
+      "name": "Backpack",
+      "category": "bags",
+      "brand": "CarryPro",
+      "price": 1599.00
+    },
+    {
+      "id": "PROD_009",
+      "name": "Water Bottle",
+      "category": "home",
+      "brand": "HydroLife",
+      "price": 699.00
+    },
+    {
+      "id": "PROD_010",
+      "name": "Coffee Mug",
+      "category": "home",
+      "brand": "HomeCraft",
+      "price": 399.00
+    }
+  ]
+}
