@@ -16,6 +16,7 @@ class CustomerGraphGenerator(
                             ) {
 
   def generate(
+                addressCount: Int,
                 orderCount: Int,
                 orderItemCount: Int
               ): CustomerGraph = {
@@ -27,8 +28,9 @@ class CustomerGraphGenerator(
         randomGenerator
       )
 
-    val address =
+    val addresses = (1 to addressCount).map { _ =>
       addressGenerator.generate()
+    }
 
     val orderGenerator =
       new OrderGenerator(
@@ -73,7 +75,7 @@ class CustomerGraphGenerator(
 
     CustomerGraph(
       customer = customer,
-      addresses = Seq(address),
+      addresses = addresses,
       orders = generatedOrders.map(_._1),
       orderItems = generatedOrders.flatMap(_._2),
       payments = generatedOrders.map(_._3)

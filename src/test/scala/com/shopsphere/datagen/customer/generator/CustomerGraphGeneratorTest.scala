@@ -47,22 +47,25 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
         productReferenceData,
         randomGenerator
       ).generate(
+        addressCount = 2,
         orderCount = 2,
         orderItemCount = 2
       )
 
     assert(graph.customer.id == customer.id)
 
-    assert(graph.addresses.size == 1)
+    assert(graph.addresses.size == 2)
     assert(graph.orders.size == 2)
     assert(graph.orderItems.size == 4)
     assert(graph.payments.size == 2)
 
-    val address = graph.addresses.head
+    assert(
+      graph.addresses.forall(_.customerId == customer.id)
+    )
+
     val order = graph.orders.head
     val payment = graph.payments.head
 
-    assert(address.customerId == customer.id)
     assert(order.customerId == customer.id)
 
     assert(

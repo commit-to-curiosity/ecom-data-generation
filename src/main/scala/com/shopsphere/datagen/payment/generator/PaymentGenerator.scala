@@ -29,9 +29,12 @@ class PaymentGenerator(
     )
 
   override def generate(): Payment = {
+    generate(paymentStatusDistribution.sample())
+  }
+
+  def generate(paymentStatus: PaymentStatus): Payment = {
     val paymentDate = generatePaymentDate()
     val paymentMethod = paymentMethodDistribution.sample()
-    val paymentStatus = paymentStatusDistribution.sample()
 
     Payment(
       id = generatePaymentId(),
