@@ -5,8 +5,8 @@ import com.shopsphere.datagen.common.distribution.RandomGenerator
 import com.shopsphere.datagen.customer.model.{Customer, CustomerGraph}
 import com.shopsphere.datagen.geography.reference.GeographyReferenceData
 import com.shopsphere.datagen.order.generator.{OrderGenerator, OrderItemGenerator}
+import com.shopsphere.datagen.payment.generator.{PaymentAttemptOutcomeGenerator, PaymentGenerator}
 import com.shopsphere.datagen.product.reference.ProductReferenceData
-import com.shopsphere.datagen.payment.generator.PaymentGenerator
 
 class CustomerGraphGenerator(
                               customer: Customer,
@@ -28,13 +28,19 @@ class CustomerGraphGenerator(
         randomGenerator
       )
 
-    val addresses = (1 to addressCount).map { _ =>
-      addressGenerator.generate()
-    }
+    val addresses =
+      (1 to addressCount).map { _ =>
+        addressGenerator.generate()
+      }
 
     val orderGenerator =
       new OrderGenerator(
         customer,
+        randomGenerator
+      )
+
+    val paymentAttemptOutcomeGenerator =
+      new PaymentAttemptOutcomeGenerator(
         randomGenerator
       )
 
@@ -64,13 +70,21 @@ class CustomerGraphGenerator(
             totalAmount = totalAmount
           )
 
-        val payment =
+        val paymentAttemptOutcome =
+          paymentAttemptOutcomeGenerator.generate()
+
+        val paymentGenerator =
           new PaymentGenerator(
             order,
             randomGenerator
-          ).generate()
+          )
 
-        (order, orderItems, payment)
+        val payments =
+          paymentAttemptOutcome.paymentStatuses.map { paymentStatus =>
+            paymentGenerator.generate(paymentStatus)
+          }
+
+        (order, orderItems, payments)
       }
 
     CustomerGraph(
@@ -78,7 +92,7 @@ class CustomerGraphGenerator(
       addresses = addresses,
       orders = generatedOrders.map(_._1),
       orderItems = generatedOrders.flatMap(_._2),
-      payments = generatedOrders.map(_._3)
+      payments = generatedOrders.flatMap(_._3)
     )
   }
 }
