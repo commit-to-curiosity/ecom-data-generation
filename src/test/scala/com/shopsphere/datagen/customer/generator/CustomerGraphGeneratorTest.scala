@@ -1,8 +1,10 @@
 package com.shopsphere.datagen.customer.generator
 
 import com.shopsphere.datagen.common.distribution.RandomGenerator
+import com.shopsphere.datagen.common.enums.{PaymentAttemptOutcome, PaymentStatus}
 import com.shopsphere.datagen.customer.model.Customer
 import com.shopsphere.datagen.geography.loader.GeographyLoader
+import com.shopsphere.datagen.order.generator.OrderItemIdGenerator
 import com.shopsphere.datagen.product.loader.ProductLoader
 import com.shopsphere.datagen.product.reference.ProductReferenceData
 import org.scalatest.funsuite.AnyFunSuite
@@ -45,7 +47,8 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
         customer,
         geographyReferenceData,
         productReferenceData,
-        randomGenerator
+        randomGenerator,
+        new OrderItemIdGenerator()
       ).generate(
         addressCount = 2,
         orderCount = 2,
@@ -57,7 +60,7 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
     assert(graph.addresses.size == 2)
     assert(graph.orders.size == 2)
     assert(graph.orderItems.size == 4)
-    assert(graph.payments.size == 2)
+    assert(graph.payments.nonEmpty)
 
     assert(
       graph.addresses.forall(_.customerId == customer.id)
@@ -84,12 +87,25 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
 
       assert(order.totalAmount == calculatedTotal)
 
-      val payment =
-        graph.payments.find(_.orderId == order.id).get
+      val payments =
+        graph.payments.filter(_.orderId == order.id)
 
-      assert(payment.amount == order.totalAmount)
-      assert(!payment.paymentDate.isBefore(order.orderDate))
-      assert(!payment.paymentDate.isAfter(LocalDate.of(2026, 1, 1)))
+      assert(payments.nonEmpty)
+
+      val paymentStatuses =
+        payments.map(_.paymentStatus)
+
+      assert(
+        PaymentAttemptOutcome.all.exists { outcome =>
+          outcome.paymentStatuses.map(_.name) == paymentStatuses
+        }
+      )
+
+      payments.foreach { payment =>
+        assert(payment.amount == order.totalAmount)
+        assert(!payment.paymentDate.isBefore(order.orderDate))
+        assert(!payment.paymentDate.isAfter(LocalDate.of(2026, 1, 1)))
+      }
     }
   }
 }

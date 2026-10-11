@@ -9,7 +9,8 @@ import com.shopsphere.datagen.product.reference.ProductReferenceData
 class OrderItemGenerator(
                           order: Order,
                           productReferenceData: ProductReferenceData,
-                          randomGenerator: RandomGenerator
+                          randomGenerator: RandomGenerator,
+                          orderItemIdGenerator: OrderItemIdGenerator
                         ) extends Generator[OrderItem] {
 
   private var nextOrderItemId = 1L
@@ -43,9 +44,6 @@ class OrderItemGenerator(
     )
   }
 
-  private def generateOrderItemId(): String = {
-    val orderItemId = f"ITEM_$nextOrderItemId%06d"
-    nextOrderItemId += 1
-    orderItemId
-  }
+  private def generateOrderItemId(): String =
+    orderItemIdGenerator.generate()
 }

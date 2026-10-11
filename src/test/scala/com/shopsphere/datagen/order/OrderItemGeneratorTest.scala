@@ -1,7 +1,7 @@
 package com.shopsphere.datagen.order
 
 import com.shopsphere.datagen.common.distribution.RandomGenerator
-import com.shopsphere.datagen.order.generator.{OrderGenerator, OrderItemGenerator}
+import com.shopsphere.datagen.order.generator.{OrderGenerator, OrderItemGenerator, OrderItemIdGenerator}
 import com.shopsphere.datagen.product.loader.ProductLoader
 import com.shopsphere.datagen.product.reference.ProductReferenceData
 import com.shopsphere.datagen.customer.model.Customer
@@ -48,7 +48,8 @@ class OrderItemGeneratorTest extends AnyFunSuite {
       new OrderItemGenerator(
         order,
         productReferenceData,
-        randomGenerator
+        randomGenerator,
+        new OrderItemIdGenerator()
       ).generate()
 
     val product =
@@ -60,5 +61,17 @@ class OrderItemGeneratorTest extends AnyFunSuite {
     assert(orderItem.quantity <= 5)
     assert(orderItem.unitPrice == product.price)
     assert(orderItem.totalPrice == orderItem.unitPrice * orderItem.quantity)
+  }
+
+  test("OrderItemIdGenerator should generate unique sequential IDs") {
+    val idGenerator = new OrderItemIdGenerator()
+
+    val firstId = idGenerator.generate()
+    val secondId = idGenerator.generate()
+    val thirdId = idGenerator.generate()
+
+    assert(firstId == "ITEM_000001")
+    assert(secondId == "ITEM_000002")
+    assert(thirdId == "ITEM_000003")
   }
 }

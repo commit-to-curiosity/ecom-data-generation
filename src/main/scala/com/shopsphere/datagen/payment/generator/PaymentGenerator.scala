@@ -11,10 +11,9 @@ import java.time.temporal.ChronoUnit
 
 class PaymentGenerator(
                         order: Order,
-                        randomGenerator: RandomGenerator
+                        randomGenerator: RandomGenerator,
+                        paymentIdGenerator: PaymentIdGenerator
                       ) extends Generator[Payment] {
-
-  private var nextPaymentId = 1L
 
   private val paymentMethodDistribution =
     new UniformDistribution[PaymentMethod](
@@ -46,11 +45,8 @@ class PaymentGenerator(
     )
   }
 
-  private def generatePaymentId(): String = {
-    val paymentId = f"PAY_$nextPaymentId%06d"
-    nextPaymentId += 1
-    paymentId
-  }
+  private def generatePaymentId(): String =
+    paymentIdGenerator.generate()
 
   private def generatePaymentDate(): LocalDate = {
     val asOfDate = LocalDate.of(2026, 1, 1)

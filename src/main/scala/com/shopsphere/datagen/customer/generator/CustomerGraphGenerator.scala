@@ -4,15 +4,16 @@ import com.shopsphere.datagen.address.generator.AddressGenerator
 import com.shopsphere.datagen.common.distribution.RandomGenerator
 import com.shopsphere.datagen.customer.model.{Customer, CustomerGraph}
 import com.shopsphere.datagen.geography.reference.GeographyReferenceData
-import com.shopsphere.datagen.order.generator.{OrderGenerator, OrderItemGenerator}
-import com.shopsphere.datagen.payment.generator.{PaymentAttemptOutcomeGenerator, PaymentGenerator}
+import com.shopsphere.datagen.order.generator.{OrderGenerator, OrderItemGenerator, OrderItemIdGenerator}
+import com.shopsphere.datagen.payment.generator.{PaymentAttemptOutcomeGenerator, PaymentGenerator, PaymentIdGenerator}
 import com.shopsphere.datagen.product.reference.ProductReferenceData
 
 class CustomerGraphGenerator(
                               customer: Customer,
                               geographyReferenceData: GeographyReferenceData,
                               productReferenceData: ProductReferenceData,
-                              randomGenerator: RandomGenerator
+                              randomGenerator: RandomGenerator,
+                              orderItemIdGenerator: OrderItemIdGenerator
                             ) {
 
   def generate(
@@ -44,6 +45,8 @@ class CustomerGraphGenerator(
         randomGenerator
       )
 
+    val orderItemIdGenerator = new OrderItemIdGenerator()
+
     val generatedOrders =
       (1 to orderCount).map { _ =>
 
@@ -54,7 +57,8 @@ class CustomerGraphGenerator(
           new OrderItemGenerator(
             generatedOrder,
             productReferenceData,
-            randomGenerator
+            randomGenerator,
+            orderItemIdGenerator
           )
 
         val orderItems =
@@ -73,10 +77,13 @@ class CustomerGraphGenerator(
         val paymentAttemptOutcome =
           paymentAttemptOutcomeGenerator.generate()
 
+        val paymentIdGenerator = new PaymentIdGenerator()
+
         val paymentGenerator =
           new PaymentGenerator(
             order,
-            randomGenerator
+            randomGenerator,
+            paymentIdGenerator
           )
 
         val payments =

@@ -28,14 +28,15 @@ class OrderGenerator(
   }
 
   private def generateOrderId(): String = {
-    val orderId = f"ORD_$nextOrderId%06d"
+    val orderId = f"ORD_${customer.id}_$nextOrderId%06d"
     nextOrderId += 1
     orderId
   }
 
   private def generateOrderDate(): LocalDate = {
     val asOfDate = LocalDate.of(2026, 1, 1)
-    val daysSinceRegistration = ChronoUnit.DAYS.between(customer.registrationDate, asOfDate).toInt
+    val daysSinceRegistration =
+      ChronoUnit.DAYS.between(customer.registrationDate, asOfDate).toInt
 
     val orderDay =
       new UniformDistribution(

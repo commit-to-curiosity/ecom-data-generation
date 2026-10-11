@@ -40,7 +40,8 @@ class PaymentGeneratorTest extends AnyFunSuite {
     val payment =
       new PaymentGenerator(
         order,
-        randomGenerator
+        randomGenerator,
+        new PaymentIdGenerator()
       ).generate()
 
     assert(payment.id == "PAY_000001")
@@ -83,7 +84,8 @@ class PaymentGeneratorTest extends AnyFunSuite {
     val payment =
       new PaymentGenerator(
         order,
-        randomGenerator
+        randomGenerator,
+        new PaymentIdGenerator()
       ).generate(PaymentStatus.FAILED)
 
     assert(payment.paymentStatus == PaymentStatus.FAILED.name)
