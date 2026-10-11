@@ -7,13 +7,15 @@ import com.shopsphere.datagen.order.model.Order
 
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.atomic.AtomicLong
 
 class OrderGenerator(
                       customer: Customer,
-                      randomGenerator: RandomGenerator
+                      randomGenerator: RandomGenerator,
+                      asOfDate: LocalDate
                     ) extends Generator[Order] {
 
-  private var nextOrderId = 1L
+  private val nextOrderId = new AtomicLong(1L)
 
   override def generate(): Order = {
     val orderDate = generateOrderDate()
@@ -27,14 +29,20 @@ class OrderGenerator(
     )
   }
 
+  def this(
+            customer: Customer,
+            randomGenerator: RandomGenerator
+          ) = this(
+    customer,
+    randomGenerator,
+    LocalDate.of(2026, 1, 1)
+  )
+
   private def generateOrderId(): String = {
-    val orderId = f"ORD_${customer.id}_$nextOrderId%06d"
-    nextOrderId += 1
-    orderId
+    f"ORD_${customer.id}_${nextOrderId.getAndIncrement()}%06d"
   }
 
   private def generateOrderDate(): LocalDate = {
-    val asOfDate = LocalDate.of(2026, 1, 1)
     val daysSinceRegistration =
       ChronoUnit.DAYS.between(customer.registrationDate, asOfDate).toInt
 

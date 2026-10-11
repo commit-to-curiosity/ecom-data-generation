@@ -5,6 +5,8 @@ class UniformDistribution[T](
                               randomGenerator: RandomGenerator
                             ) extends Distribution[T] {
 
+  require(values.nonEmpty, "Uniform distribution values must not be empty")
+
   override def sample(): T = {
     val index = (randomGenerator.nextDouble() * values.size).toInt
     values(index)

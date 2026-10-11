@@ -2,6 +2,7 @@ package com.shopsphere.datagen.customer.generator
 
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.atomic.AtomicLong
 import com.shopsphere.datagen.common.distribution.{RandomGenerator, UniformDistribution, WeightedDistribution}
 import com.shopsphere.datagen.common.generator.Generator
 import com.shopsphere.datagen.customer.config.CustomerAgeBandConfig
@@ -15,7 +16,7 @@ class CustomerGenerator(
                          identityGenerator: CustomerIdentityGenerator
                        ) extends Generator[Customer] {
 
-  private var nextCustomerId = 1L
+  private val nextCustomerId = new AtomicLong(1L)
 
   private val genderDistribution =
     new WeightedDistribution[Gender](
@@ -146,9 +147,7 @@ class CustomerGenerator(
   }
 
   private def generateCustomerId(): String = {
-    val customerId = f"CUST_$nextCustomerId%06d"
-    nextCustomerId += 1
-    customerId
+    CustomerIdGenerator.generate(nextCustomerId.getAndIncrement())
   }
 
   private def generateAge(

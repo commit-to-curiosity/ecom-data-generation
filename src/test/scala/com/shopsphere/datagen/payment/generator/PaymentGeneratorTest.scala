@@ -92,4 +92,45 @@ class PaymentGeneratorTest extends AnyFunSuite {
     assert(payment.orderId == order.id)
     assert(payment.amount == order.totalAmount)
   }
+
+  test("PaymentGenerator should generate payment dates using the provided as-of date") {
+
+    val customer = Customer(
+      id = "CUST_000001",
+      firstName = "John",
+      lastName = "Doe",
+      email = "john.doe@example.com",
+      phone = "9999999999",
+      gender = "male",
+      dateOfBirth = LocalDate.of(1990, 1, 1),
+      registrationDate = LocalDate.of(2024, 1, 1),
+      customerStatus = "active",
+      customerSegment = "standard",
+      acquisitionChannel = "organic",
+      acquisitionCampaign = "seo",
+      preferredDevice = "mobile",
+      preferredPaymentMethod = "upi"
+    )
+
+    val asOfDate = LocalDate.of(2025, 1, 1)
+    val randomGenerator = new RandomGenerator(42)
+
+    val order =
+      new OrderGenerator(
+        customer,
+        randomGenerator,
+        asOfDate
+      ).generate()
+
+    val payment =
+      new PaymentGenerator(
+        order,
+        randomGenerator,
+        new PaymentIdGenerator(),
+        asOfDate
+      ).generate()
+
+    assert(!payment.paymentDate.isBefore(order.orderDate))
+    assert(!payment.paymentDate.isAfter(asOfDate))
+  }
 }

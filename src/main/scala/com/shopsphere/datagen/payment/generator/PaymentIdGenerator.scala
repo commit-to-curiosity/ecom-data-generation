@@ -1,12 +1,12 @@
 package com.shopsphere.datagen.payment.generator
 
+import java.util.concurrent.atomic.AtomicLong
+
 class PaymentIdGenerator {
 
-  private var nextPaymentId = 1L
+  private val nextPaymentId = new AtomicLong(1L)
 
   def generate(): String = {
-    val paymentId = f"PAY_$nextPaymentId%06d"
-    nextPaymentId += 1
-    paymentId
+    f"PAY_${nextPaymentId.getAndIncrement()}%06d"
   }
 }

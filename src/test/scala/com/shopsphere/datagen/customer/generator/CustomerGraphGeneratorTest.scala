@@ -5,6 +5,7 @@ import com.shopsphere.datagen.common.enums.{PaymentAttemptOutcome, PaymentStatus
 import com.shopsphere.datagen.customer.model.Customer
 import com.shopsphere.datagen.geography.loader.GeographyLoader
 import com.shopsphere.datagen.order.generator.OrderItemIdGenerator
+import com.shopsphere.datagen.payment.generator.PaymentIdGenerator
 import com.shopsphere.datagen.product.loader.ProductLoader
 import com.shopsphere.datagen.product.reference.ProductReferenceData
 import org.scalatest.funsuite.AnyFunSuite
@@ -48,7 +49,9 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
         geographyReferenceData,
         productReferenceData,
         randomGenerator,
-        new OrderItemIdGenerator()
+        new OrderItemIdGenerator(),
+        new PaymentIdGenerator(),
+        LocalDate.of(2026, 1, 1)
       ).generate(
         addressCount = 2,
         orderCount = 2,
@@ -61,6 +64,8 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
     assert(graph.orders.size == 2)
     assert(graph.orderItems.size == 4)
     assert(graph.payments.nonEmpty)
+    assert(graph.orderItems.map(_.id).distinct.size == graph.orderItems.size)
+    assert(graph.payments.map(_.id).distinct.size == graph.payments.size)
 
     assert(
       graph.addresses.forall(_.customerId == customer.id)

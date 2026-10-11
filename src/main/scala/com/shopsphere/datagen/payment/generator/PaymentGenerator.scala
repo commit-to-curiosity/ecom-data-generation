@@ -12,7 +12,8 @@ import java.time.temporal.ChronoUnit
 class PaymentGenerator(
                         order: Order,
                         randomGenerator: RandomGenerator,
-                        paymentIdGenerator: PaymentIdGenerator
+                        paymentIdGenerator: PaymentIdGenerator,
+                        asOfDate: LocalDate
                       ) extends Generator[Payment] {
 
   private val paymentMethodDistribution =
@@ -30,6 +31,17 @@ class PaymentGenerator(
   override def generate(): Payment = {
     generate(paymentStatusDistribution.sample())
   }
+
+  def this(
+            order: Order,
+            randomGenerator: RandomGenerator,
+            paymentIdGenerator: PaymentIdGenerator
+          ) = this(
+    order,
+    randomGenerator,
+    paymentIdGenerator,
+    LocalDate.of(2026, 1, 1)
+  )
 
   def generate(paymentStatus: PaymentStatus): Payment = {
     val paymentDate = generatePaymentDate()
@@ -49,8 +61,6 @@ class PaymentGenerator(
     paymentIdGenerator.generate()
 
   private def generatePaymentDate(): LocalDate = {
-    val asOfDate = LocalDate.of(2026, 1, 1)
-
     val daysSinceOrder =
       ChronoUnit.DAYS.between(order.orderDate, asOfDate).toInt
 

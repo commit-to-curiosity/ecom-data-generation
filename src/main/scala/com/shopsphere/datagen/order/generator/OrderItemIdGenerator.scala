@@ -1,12 +1,12 @@
 package com.shopsphere.datagen.order.generator
 
+import java.util.concurrent.atomic.AtomicLong
+
 class OrderItemIdGenerator {
 
-  private var nextOrderItemId = 1L
+  private val nextOrderItemId = new AtomicLong(1L)
 
   def generate(): String = {
-    val orderItemId = f"ITEM_$nextOrderItemId%06d"
-    nextOrderItemId += 1
-    orderItemId
+    f"ITEM_${nextOrderItemId.getAndIncrement()}%06d"
   }
 }

@@ -38,11 +38,41 @@ class OrderGeneratorTest extends AnyFunSuite {
 
     val order = orderGenerator.generate()
 
-    assert(order.id == "ORD_000001")
+    assert(order.id == "ORD_CUST_000001_000001")
     assert(order.customerId == customer.id)
     assert(!order.orderDate.isBefore(customer.registrationDate))
     assert(!order.orderDate.isAfter(LocalDate.of(2026, 1, 1)))
     assert(order.orderStatus == "completed")
     assert(order.totalAmount == BigDecimal("0.00"))
+  }
+
+  test("should generate order dates using the provided as-of date") {
+    val customer =
+      Customer(
+        id = "CUST_000001",
+        firstName = "John",
+        lastName = "Doe",
+        email = "john.doe@example.com",
+        phone = "9999999999",
+        gender = "male",
+        dateOfBirth = LocalDate.of(1990, 5, 10),
+        registrationDate = LocalDate.of(2023, 6, 15),
+        customerStatus = "active",
+        customerSegment = "standard",
+        acquisitionChannel = "organic",
+        acquisitionCampaign = "seo",
+        preferredDevice = "mobile",
+        preferredPaymentMethod = "upi"
+      )
+
+    val asOfDate = LocalDate.of(2025, 1, 1)
+    val order =
+      new OrderGenerator(
+        customer,
+        new RandomGenerator(42L),
+        asOfDate
+      ).generate()
+
+    assert(!order.orderDate.isAfter(asOfDate))
   }
 }
