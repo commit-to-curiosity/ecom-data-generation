@@ -8,8 +8,9 @@
 ## Documents
 - `PROJECT_STATE.md` — verified project snapshot, architecture, implementation status, gaps, and next steps.
 - `decisions/README.md` — how decisions are proposed, accepted, reviewed, and superseded.
-- `decisions/ADR-0001-identifier-conventions.md` — identifier-format conflict awaiting confirmation.
+- `decisions/ADR-0001-identifier-conventions.md` — accepted entity identifier contract.
 - `decisions/ADR-0002-build-system-branch-strategy.md` — SBT and Gradle branch responsibilities.
+- `decisions/ADR-0003-deterministic-parallel-generation.md` — accepted chunk-based reproducibility design.
 
 ## Maintenance
 Update project state when a meaningful feature, interface, architecture, test result, or known limitation changes.

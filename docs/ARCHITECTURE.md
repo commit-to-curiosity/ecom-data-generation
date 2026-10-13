@@ -152,12 +152,28 @@ The order-item and payment ID generators maintain counters keyed by order ID usi
 
 See ADR-0001 for the full identifier rules.
 
-## 6. Randomness and determinism
+## 6. Randomness and deterministic parallel generation
 
-`Main` constructs `RandomGenerator` with seed `42L`. The graph generator receives a random generator from its caller and passes it to multiple domain generators.
+`Main` currently constructs `RandomGenerator` with seed `42L`. The graph
+generator passes a random generator to multiple domain generators. A fixed
+seed does not by itself guarantee identical results under different parallel
+scheduling patterns.
 
-A shared seeded random generator does not guarantee that parallel execution will produce the same output as sequential execution. A future parallel-generation design must specify random stream ownership, partitioning, sequence allocation, and output-order guarantees.
+[ADR-0003](decisions/ADR-0003-deterministic-parallel-generation.md) records
+the accepted design for deterministic parallel generation:
 
+- One independent random stream per logical chunk.
+- An initial chunk size of 10,000 customers.
+- Stable global customer ordinals and deterministic chunk boundaries.
+- Chunk-local mutable random state and generator instances.
+- Bounded parallel execution.
+- Deterministic chunk output ordering.
+- Canonical output equality across worker counts as a test requirement.
+
+The design is not yet implemented or verified. The seed-derivation algorithm
+must be specified and tested during implementation. The guarantee is scoped
+to fixed inputs, chunk size, seed derivation, generator version, and random
+draw order. Changes to those inputs or rules may change generated values.
 ## 7. Architectural status and boundaries
 
 | Capability | Observed status |
@@ -169,7 +185,7 @@ A shared seeded random generator does not guarantee that parallel execution will
 | Graph generation in `Main` | Not wired into the inspected entry point |
 | End-to-end graph output verification | Not established by the current unit-test result |
 | Database or file export from `Main` | Not present in the inspected execution path |
-| Deterministic parallel generation contract | Not yet defined |
+| Deterministic parallel generation contract | Defined in ADR-0003; implementation and verification pending |
 
 The distinction between implementation, unit testing, application wiring, and end-to-end verification must be maintained when assessing project readiness.
 
@@ -180,6 +196,7 @@ The distinction between implementation, unit testing, application wiring, and en
 - [Decision records](decisions/README.md)
 - [Identifier conventions (ADR-0001)](decisions/ADR-0001-identifier-conventions.md)
 - [Build-system branch strategy (ADR-0002)](decisions/ADR-0002-build-system-branch-strategy.md)
+- [Deterministic parallel generation (ADR-0003)](decisions/ADR-0003-deterministic-parallel-generation.md)
 
 ## 9. Maintenance rule
 
