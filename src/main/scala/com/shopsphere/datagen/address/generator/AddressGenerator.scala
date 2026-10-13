@@ -39,7 +39,7 @@ class AddressGenerator(
   }
 
   private def generateAddressId(): String = {
-    val addressId = f"ADDR_$nextAddressId%06d"
+    val addressId = f"ADDR${nextAddressId}%06d_${customerId}"
     nextAddressId += 1
     addressId
   }

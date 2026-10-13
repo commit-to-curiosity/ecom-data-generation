@@ -12,7 +12,7 @@ class OrderGeneratorTest extends AnyFunSuite {
   test("should generate a valid order for a customer") {
     val customer =
       Customer(
-        id = "CUST_000001",
+        id = "CUST000001",
         firstName = "John",
         lastName = "Doe",
         email = "john.doe@example.com",
@@ -38,7 +38,7 @@ class OrderGeneratorTest extends AnyFunSuite {
 
     val order = orderGenerator.generate()
 
-    assert(order.id == "ORD_CUST_000001_000001")
+    assert(order.id == "ORD000001_CUST000001")
     assert(order.customerId == customer.id)
     assert(!order.orderDate.isBefore(customer.registrationDate))
     assert(!order.orderDate.isAfter(LocalDate.of(2026, 1, 1)))
@@ -49,7 +49,7 @@ class OrderGeneratorTest extends AnyFunSuite {
   test("should generate order dates using the provided as-of date") {
     val customer =
       Customer(
-        id = "CUST_000001",
+        id = "CUST000001",
         firstName = "John",
         lastName = "Doe",
         email = "john.doe@example.com",

@@ -13,15 +13,15 @@ class AddressGeneratorTest extends AnyFunSuite {
 
     val addressGenerator =
       new AddressGenerator(
-        customerId = "CUST_000001",
+        customerId = "CUST000001",
         geographyReferenceData = geographyReferenceData,
         randomGenerator = randomGenerator
       )
 
     val address = addressGenerator.generate()
 
-    assert(address.id == "ADDR_000001")
-    assert(address.customerId == "CUST_000001")
+    assert(address.id == "ADDR000001_CUST000001")
+    assert(address.customerId == "CUST000001")
     assert(geographyReferenceData.findBuilding(address.buildingId).nonEmpty)
     assert(address.unitNumber.matches("[A-Z]\\d{3}"))
     assert(address.postalCode.nonEmpty)

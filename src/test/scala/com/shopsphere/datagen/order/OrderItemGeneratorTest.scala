@@ -14,7 +14,7 @@ class OrderItemGeneratorTest extends AnyFunSuite {
   test("should generate a valid order item for an order and product") {
     val customer =
       Customer(
-        id = "CUST_000001",
+        id = "CUST000001",
         firstName = "John",
         lastName = "Doe",
         email = "john.doe@example.com",
@@ -55,7 +55,7 @@ class OrderItemGeneratorTest extends AnyFunSuite {
     val product =
       productReferenceData.findProduct(orderItem.productId).get
 
-    assert(orderItem.id == "ITEM_000001")
+    assert(orderItem.id == s"ITEM000001_${order.id}")
     assert(orderItem.orderId == order.id)
     assert(orderItem.quantity >= 1)
     assert(orderItem.quantity <= 5)
@@ -66,12 +66,17 @@ class OrderItemGeneratorTest extends AnyFunSuite {
   test("OrderItemIdGenerator should generate unique sequential IDs") {
     val idGenerator = new OrderItemIdGenerator()
 
-    val firstId = idGenerator.generate()
-    val secondId = idGenerator.generate()
-    val thirdId = idGenerator.generate()
+    val orderId1 = "ORD000001_CUST000001"
+    val orderId2 = "ORD000002_CUST000001"
 
-    assert(firstId == "ITEM_000001")
-    assert(secondId == "ITEM_000002")
-    assert(thirdId == "ITEM_000003")
+    val firstId = idGenerator.generate(orderId1)
+    val secondId = idGenerator.generate(orderId1)
+    val thirdId = idGenerator.generate(orderId1)
+    val firstIdForSecondOrder = idGenerator.generate(orderId2)
+
+    assert(firstId == s"ITEM000001_${orderId1}")
+    assert(secondId == s"ITEM000002_${orderId1}")
+    assert(thirdId == s"ITEM000003_${orderId1}")
+    assert(firstIdForSecondOrder == s"ITEM000001_${orderId2}")
   }
 }
