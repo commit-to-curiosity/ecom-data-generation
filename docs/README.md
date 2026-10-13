@@ -16,3 +16,7 @@ Update project state when a meaningful feature, interface, architecture, test re
 Create an ADR when a decision affects long-term behavior, compatibility, architecture, data contracts, or build strategy.
 
 Keep documentation concise and evidence-based. Do not copy entire source files into documentation.
+
+## Architecture documentation
+
+- [Architecture](ARCHITECTURE.md) — component responsibilities, current entry-point flow, and graph-generation boundaries.
