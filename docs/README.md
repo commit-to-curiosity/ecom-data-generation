@@ -20,3 +20,7 @@ Keep documentation concise and evidence-based. Do not copy entire source files i
 ## Architecture documentation
 
 - [Architecture](ARCHITECTURE.md) — component responsibilities, current entry-point flow, and graph-generation boundaries.
+
+## Data model
+
+- [Data model](DATA_MODEL.md) — entity schemas, relationships, identifiers, and generation cardinalities.
