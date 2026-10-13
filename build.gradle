@@ -1,0 +1,91 @@
+plugins {
+    id 'scala'
+    id 'application'
+}
+
+group = 'com.shopsphere'
+version = '0.1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+application {
+    mainClass = 'com.shopsphere.datagen.Main'
+}
+
+dependencies {
+    implementation 'org.scala-lang:scala-library:2.13.18'
+
+    implementation 'com.typesafe:config:1.4.3'
+    implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.13:2.20.0'
+    implementation 'net.datafaker:datafaker:2.5.2'
+
+    implementation 'org.apache.logging.log4j:log4j-api:2.26.1'
+    implementation 'org.apache.logging.log4j:log4j-core:2.26.1'
+
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.20.0'
+
+    testImplementation 'org.scalatest:scalatest_2.13:3.2.19'
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDirs = [
+                    'src/main/resources',
+                    'conf/hocon',
+                    'conf/json',
+                    'conf/yaml'
+            ]
+        }
+    }
+}
+
+/*
+ * ScalaTest is not natively executed by Gradle's standard
+ * JUnit-based test task. Run its discovery runner explicitly.
+ */
+tasks.register('scalatest', JavaExec) {
+    group = 'verification'
+    description = 'Runs ScalaTest suites.'
+
+    dependsOn tasks.named('testClasses')
+
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.scalatest.tools.Runner'
+
+    doFirst {
+        def testDirs = sourceSets.test.output.classesDirs.files
+        def suiteName = project.findProperty('suite')
+
+        def runnerArgs = []
+        testDirs.each { dir ->
+            if (dir.exists()) {
+                runnerArgs.addAll(['-R', dir.absolutePath])
+            }
+        }
+
+        runnerArgs.add('-o')
+
+        if (suiteName) {
+            runnerArgs.addAll(['-s', suiteName.toString()])
+        }
+
+        args = runnerArgs
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('scalatest')
+}
+
+tasks.named('test') {
+    enabled = false
+}
