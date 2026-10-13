@@ -8,6 +8,12 @@ Architecture Decision Records (ADRs) preserve decisions that should survive code
 - **Under review** — conflicting evidence, an unresolved question, or confirmation is required.
 - **Superseded** — replaced by a later decision; retain the historical record and link the replacement.
 
+## Decision records
+
+- [ADR-0001: Entity Identifier Conventions](ADR-0001-identifier-conventions.md) — Accepted.
+- [ADR-0002: SBT and Gradle Branch Strategy](ADR-0002-build-system-branch-strategy.md) — Proposed.
+- [ADR-0003: Deterministic Parallel Generation](ADR-0003-deterministic-parallel-generation.md) — Accepted.
+
 ## When to create an ADR
 Create one for decisions affecting:
 - Public or persisted data formats and identifier contracts
