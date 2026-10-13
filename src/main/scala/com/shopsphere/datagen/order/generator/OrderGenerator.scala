@@ -39,7 +39,7 @@ class OrderGenerator(
   )
 
   private def generateOrderId(): String = {
-    f"ORD_${customer.id}_${nextOrderId.getAndIncrement()}%06d"
+    f"ORD${nextOrderId.getAndIncrement()}%06d_${customer.id}"
   }
 
   private def generateOrderDate(): LocalDate = {

@@ -48,7 +48,7 @@ class PaymentGenerator(
     val paymentMethod = paymentMethodDistribution.sample()
 
     Payment(
-      id = generatePaymentId(),
+      id = generatePaymentId(order.id),
       orderId = order.id,
       paymentDate = paymentDate,
       paymentMethod = paymentMethod.name,
@@ -57,8 +57,8 @@ class PaymentGenerator(
     )
   }
 
-  private def generatePaymentId(): String =
-    paymentIdGenerator.generate()
+  private def generatePaymentId(orderId: String): String =
+    paymentIdGenerator.generate(orderId)
 
   private def generatePaymentDate(): LocalDate = {
     val daysSinceOrder =

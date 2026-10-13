@@ -13,7 +13,6 @@ class OrderItemGenerator(
                           orderItemIdGenerator: OrderItemIdGenerator
                         ) extends Generator[OrderItem] {
 
-  private var nextOrderItemId = 1L
 
   private val products =
     productReferenceData.products
@@ -45,5 +44,5 @@ class OrderItemGenerator(
   }
 
   private def generateOrderItemId(): String =
-    orderItemIdGenerator.generate()
+    orderItemIdGenerator.generate(order.id)
 }

@@ -17,7 +17,7 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
   test("CustomerGraphGenerator should generate a connected customer graph") {
 
     val customer = Customer(
-      id = "CUST_000001",
+      id = "CUST000001",
       firstName = "John",
       lastName = "Doe",
       email = "john.doe@example.com",
@@ -95,7 +95,10 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
       val payments =
         graph.payments.filter(_.orderId == order.id)
 
+      assert(orderItems.nonEmpty)
+      assert(orderItems.head.id == s"ITEM000001_${order.id}")
       assert(payments.nonEmpty)
+      assert(payments.head.id == s"PAY000001_${order.id}")
 
       val paymentStatuses =
         payments.map(_.paymentStatus)

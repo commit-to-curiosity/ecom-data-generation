@@ -13,7 +13,7 @@ class PaymentGeneratorTest extends AnyFunSuite {
   test("PaymentGenerator should generate payment linked to order") {
 
     val customer = Customer(
-      id = "CUST_000001",
+      id = "CUST000001",
       firstName = "John",
       lastName = "Doe",
       email = "john.doe@example.com",
@@ -44,7 +44,7 @@ class PaymentGeneratorTest extends AnyFunSuite {
         new PaymentIdGenerator()
       ).generate()
 
-    assert(payment.id == "PAY_000001")
+    assert(payment.id == s"PAY000001_${order.id}")
     assert(payment.orderId == order.id)
     assert(payment.paymentMethod.nonEmpty)
     assert(payment.paymentStatus.nonEmpty)
@@ -57,7 +57,7 @@ class PaymentGeneratorTest extends AnyFunSuite {
   test("PaymentGenerator should generate requested payment status") {
 
     val customer = Customer(
-      id = "CUST_000001",
+      id = "CUST000001",
       firstName = "John",
       lastName = "Doe",
       email = "john.doe@example.com",
@@ -96,7 +96,7 @@ class PaymentGeneratorTest extends AnyFunSuite {
   test("PaymentGenerator should generate payment dates using the provided as-of date") {
 
     val customer = Customer(
-      id = "CUST_000001",
+      id = "CUST000001",
       firstName = "John",
       lastName = "Doe",
       email = "john.doe@example.com",

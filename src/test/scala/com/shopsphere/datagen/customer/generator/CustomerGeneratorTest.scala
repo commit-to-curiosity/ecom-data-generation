@@ -23,7 +23,7 @@ class CustomerGeneratorTest extends AnyFunSuite {
 
     val customer = generator.generate()
 
-    assert(customer.id == "CUST_000001")
+    assert(customer.id == "CUST000001")
     assert(customer.firstName.nonEmpty)
     assert(customer.lastName.nonEmpty)
     assert(customer.email.nonEmpty)
