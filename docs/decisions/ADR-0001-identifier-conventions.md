@@ -1,61 +1,48 @@
 # ADR-0001: Entity Identifier Conventions
 
-- Status: Under review
+- Status: Accepted
 - Date: 2026-10-14
 
 ## Context
-Identifier formats must be consistent, reproducible, and unambiguous across generated entities and their relationships.
-
-A previously recorded intended convention is:
-
-| Entity | Intended example |
-|---|---|
-| Customer | `CUST000001` |
-| Order | `ORD000001_CUST000001` |
-| Address | `ADDR000001_CUST000001` |
-| Order item | `ITEM000001_ORD000001_CUST000001` |
-| Payment | `PAY000001_ORD000001_CUST000001` |
-
-The convention has no underscore between an entity prefix and its zero-padded sequence. Underscores separate hierarchical identifier components.
-
-However, the implementation inspected during the October 2026 review uses different formats in several generators and tests. Examples observed include `CUST_000001`, `ADDR_000001`, and `PAY_000001`. The order generator also constructs its order ID from the customer ID and a sequence in a different order from the intended example.
-
-These formats conflict and must not be silently reconciled.
+Generated entity IDs must be deterministic, unambiguous, and consistent with their parent-child relationships. The previous implementation used inconsistent underscore-separated formats and did not embed parent IDs in all child IDs.
 
 ## Decision
-No canonical identifier format is approved by this ADR yet.
 
-The project owner must confirm whether the intended examples above are authoritative or whether the current implementation is the desired contract.
+Use these canonical formats:
 
-Until confirmed:
-- Do not mass-rename generated IDs.
-- Do not update tests merely to make them agree with one assumed format.
-- Inventory all entity ID generators, model references, configuration assumptions, and tests.
-- Consider compatibility with existing generated datasets and downstream consumers.
+| Entity | Example | Sequence scope |
+|---|---|---|
+| Customer | `CUST000001` | Global ordinal supplied by caller |
+| Order | `ORD000001_CUST000001` | Per customer |
+| Address | `ADDR000001_CUST000001` | Per customer |
+| Order item | `ITEM000001_ORD000001_CUST000001` | Per order |
+| Payment | `PAY000001_ORD000001_CUST000001` | Per order |
+
+### Formatting rules
+- Entity prefixes are immediately followed by six-digit, zero-padded sequence numbers.
+- Underscores separate hierarchical components.
+- Child identifiers embed the relevant parent identifier.
+- Sequence counters are scoped as shown in the table.
+- Customer ordinals are supplied by the caller; this ADR does not define how a global ordinal is allocated.
+- Explicit relationship fields remain mandatory; embedding a parent ID does not replace referential integrity.
 
 ## Consequences
-A confirmed decision must specify:
-- Prefix and zero-padding width for each entity.
-- Whether child IDs embed parent IDs.
-- Component ordering and separators.
-- Whether sequence numbers are global, per generator, per customer, or per parent.
-- Uniqueness scope and reproducibility requirements.
-- Compatibility/migration policy for previously generated data.
+- Generator implementations and tests must use these formats.
+- Generator instances must have the intended lifecycle so counters reset at the correct parent boundary.
+- Existing generated datasets using legacy formats may require migration or regeneration.
+- Parallel generation must allocate ordinals and counters deterministically if reproducible output is required.
 
 ## Alternatives considered
-1. Adopt the previously recorded hierarchical examples.
-2. Adopt the currently implemented format.
-3. Use different formats by entity, only if explicitly justified and documented.
+1. Keep the legacy formats: rejected because they do not meet the canonical hierarchical convention.
+2. Use globally increasing child sequences: rejected in favor of per-parent sequences.
+3. Embed parent IDs and retain explicit relationship fields: accepted.
 
-No alternative is selected yet.
+## Verification
+After implementation, verify:
+- Exact ID strings for each entity.
+- Counter reset behavior at each parent boundary.
+- Uniqueness of complete IDs within the generated dataset.
+- Referential consistency between embedded IDs and explicit relationship fields.
+- Reproducibility for a fixed seed and fixed generation order.
 
-## Evidence
-Inspect the current implementations and tests for:
-- `CustomerIdGenerator`
-- `AddressGenerator`
-- `OrderGenerator`
-- `OrderItemIdGenerator`
-- `PaymentIdGenerator`
-- Corresponding generator tests
-
-The exact repository state must be checked again before implementation changes.
+Implementation and test evidence will be recorded after the changes are made and verified.
