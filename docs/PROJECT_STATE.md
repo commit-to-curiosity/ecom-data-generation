@@ -84,35 +84,96 @@ Rules:
 
 The source and test scan performed after implementation found no remaining matches for the searched legacy patterns `CUST_`, `ORD_CUST_`, `ADDR_`, `ITEM_`, or `PAY_` under `src/main/scala` and `src/test/scala`. This scan does not establish that no legacy identifiers exist in external datasets, generated files, or other directories.
 
-## 6. Important integration distinction
-A `CustomerGraphGenerator` exists and coordinates customer-related data such as addresses, orders, order items, and payments.
+## 6. Integration status distinction
 
-The inspected `Main.scala` path was wired to load customer configuration and generate a customer; it did not yet invoke the full graph generator.
+The project contains customer generation, reference-data loading, customer graph generation, and graph validation components.
 
-Therefore, distinguish these states in future reviews:
+Milestone 1 has now connected these components through `Main.scala`. The application generates one customer graph, validates its relationships and generation invariants, and logs a concise summary.
+
+Distinguish these states in future reviews:
 1. Component exists.
 2. Component has unit-test coverage.
 3. Component is wired into `Main`.
-4. End-to-end output has been verified.
+4. End-to-end execution has been verified.
 
-Do not treat these as equivalent. The identifier implementation commit does not, by itself, establish that full-graph generation is wired into the application entry point.
+The current Milestone 1 verification establishes all four states for the single-customer graph-generation path. It does not establish persistence, export, multi-customer batch execution, or parallel execution.
 
-## 7. Reproducibility
+## 7. Milestone 1: Single-Customer Graph Integration
+
+**Status: Completed and verified on 2026-10-22**
+
+### Scope delivered
+
+`Main.scala` now generates one complete `CustomerGraph` sequentially using:
+
+- Random seed: `42L`
+- Customers: 1
+- Addresses per customer: 2
+- Orders per customer: 2
+- Order items per order: 2
+- As-of date: `customerConfig.lifecycle.asOfDate`
+
+The application loads customer configuration, generates the customer, loads and validates geography reference data, loads product reference data, generates the graph, validates the graph, and logs a concise summary. The graph remains in memory.
+
+### Execution flow
+
+1. Load customer configuration.
+2. Initialize the seeded random generator and generate one customer.
+3. Load and validate geography reference data.
+4. Load product reference data.
+5. Generate the customer graph using the configured lifecycle as-of date.
+6. Validate graph relationships and generation invariants.
+7. Log validation success and graph summary counts.
+
+### Verification record
+
+Commands executed successfully:
+
+- `sbt compile` — compilation passed.
+- `sbt "Test / testFull"` — 57 tests passed across 20 suites; 0 failures.
+- `sbt run` — application completed successfully.
+
+Observed application output:
+
+| Entity or operation | Result |
+|---|---:|
+| Customer ID | `CUST000001` |
+| Addresses | 2 |
+| Orders | 2 |
+| Order items | 4 |
+| Payments | 3 |
+| Products loaded | 10 |
+| Geography validation | Passed |
+| Customer graph validation | Passed |
+
+The payment count is determined by payment-attempt outcomes and is not a fixed generation parameter.
+
+These results verify the tested working tree at the time of execution. Record the exact Git revision separately before making commit-specific verification claims.
+
+### Explicit exclusions
+
+- Parallel or chunk-based execution.
+- Database storage, file persistence, or export.
+- Multi-customer batch generation.
+- Unrelated refactoring.
+
+## 8. Reproducibility
 `RandomGenerator` wraps `java.util.Random` initialized with a `Long` seed. The inspected entry point used seed `42L`.
 
 A fixed seed can support reproducible sequential execution when random-number consumption and execution order remain unchanged. It does not, by itself, guarantee identical output across parallel worker counts or scheduling patterns.
 
 Any parallel-generation design must explicitly define deterministic partitioning, random stream allocation, ordering, and output guarantees before implementation.
 
-## 8. Current known gaps and review items
-- `Main.scala` does not yet wire the full customer graph into the application execution path, based on the inspected version.
-- Define behavior when a configured `asOfDate` precedes a customer's registration date or an order's date.
-- Establish explicit requirements for deterministic parallel generation before designing concurrency.
-- Expand payment-ID tests if the model later supports multiple payments per order; current graph assertions verify the first payment ID for each order, and the existing payment generator tests verify payment ID generation.
-- Verify the Gradle migration branch separately; the successful SBT test run on `main` does not verify `main-gradle`.
-- Record future build/test results against the exact commit tested.
+## 9. Current known gaps and review items
 
-## 9. Verification record
+- Define and test behavior when a configured `asOfDate` precedes a customer's registration date or another relevant lifecycle boundary.
+- Establish explicit requirements for deterministic parallel generation before implementing concurrency. ADR-0003 defines the design contract; implementation and verification remain pending.
+- Expand payment-ID tests if the model later supports multiple payments per order.
+- Verify the Gradle migration branch separately; successful SBT verification on `main` does not verify `main-gradle`.
+- Record future build and test results against the exact commit tested.
+- Persistence, file export, and multi-customer batch generation remain outside Milestone 1.
+
+## 10. Historical and current verification records
 Verification performed on `main` after the identifier implementation changes:
 - Command: `sbt test`
 - Result: **14 tests succeeded, 0 failed**, across 7 suites.
@@ -123,10 +184,23 @@ Verification performed on `main` after the identifier implementation changes:
 
 The test result applies to the implementation working tree that was subsequently committed as `bd19e78`. Rerun the relevant commands after later source changes before claiming the new checkout passes verification.
 
-## 10. Immediate next steps
-1. Commit this project-state update.
+### Milestone 1 verification — 2026-10-22
+
+- `sbt compile`: passed.
+- `sbt "Test / testFull"`: 57 tests passed across 20 suites; 0 failures.
+- `sbt run`: passed.
+- The application logged `Customer graph validation passed`.
+- Observed graph counts: 1 customer, 2 addresses, 2 orders, 4 order items, and 3 payments.
+- Product reference data loaded: 10 products.
+- Windows symbolic-link warnings were present; they did not prevent successful execution.
+
+The Git revision was not included in the supplied command output. Do not attribute these results to a particular commit until the revision is checked.
+
+## 11. Immediate next steps
+
+1. Review and commit the Milestone 1 source, tests, and documentation changes.
 2. Push the local `main` commits when ready.
-3. Record the current data model, generation flow, and configuration contracts.
-4. Document the Gradle verification procedure separately.
-5. Decide and document the reproducibility contract before implementing parallel generation.
-6. Revisit the `asOfDate` boundary behavior and full-graph application wiring.
+3. Document the current data model, generation flow, and configuration contracts.
+4. Verify and document the Gradle migration branch separately.
+5. Revisit the `asOfDate` boundary behavior.
+6. Implement persistence, export, multi-customer generation, or parallel execution only as separately scoped future milestones.
