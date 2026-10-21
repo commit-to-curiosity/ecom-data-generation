@@ -4,7 +4,7 @@
 
 ShopSphere E-Commerce Data Generator is a Scala 2.13.18 application for generating e-commerce domain data.
 
-This document describes the architecture observed in the source code. It distinguishes implemented components from components wired into the application entry point. It does not claim that a complete end-to-end data-generation pipeline is operational.
+This document describes the architecture observed in the source code. It distinguishes implemented components from components wired into the application entry point. The single-customer graph-generation path has been integrated and verified. Persistence, export, multi-customer batch generation, and parallel execution remain outside the scope of Milestone 1.
 
 ## 2. Architectural layers
 
@@ -21,11 +21,12 @@ Responsibilities include:
 Customer-specific configuration is defined under `customer.config`. Loader implementations reside under `customer.loader`, with `CustomerLoaderFactory` creating the customer configuration loader.
 
 Observed entry-point behavior:
+
 1. `Main` selects `ConfigFileFormat.HOCON`.
 2. `ConfigReaderFactory` creates the corresponding reader.
 3. The reader loads application configuration.
 4. `CustomerLoaderFactory` creates a customer configuration loader.
-5. The loader loads the customer configuration from the configured customer section.
+5. The loader loads customer configuration from the configured customer section.
 
 The format selection in `Main` is currently hardcoded to HOCON.
 
@@ -54,6 +55,7 @@ Important components:
 - `CustomerIdGenerator` generates canonical customer IDs.
 - `CustomerGenerator` generates a `Customer`.
 - `CustomerGraphGenerator` coordinates related entities for a customer.
+- `CustomerGraphValidator` validates graph relationships and generation invariants.
 - `Customer` and `CustomerGraph` represent the customer and its generated graph.
 
 The customer configuration includes separate concerns such as demographics, lifecycle, status, segmentation, acquisition, and behavior.
@@ -72,7 +74,7 @@ Product components are under `com.shopsphere.datagen.product`:
 - `Product` and `ProductsData` represent product data.
 - `ProductReferenceData` provides products to generators.
 
-`CustomerGraphGenerator` receives geography and product reference data as constructor dependencies. `Main` does not currently initialize these dependencies or invoke the graph generator.
+`CustomerGraphGenerator` receives geography and product reference data as constructor dependencies. `Main` loads these resources, validates geography reference data, and passes the data to the graph generator.
 
 ### 2.5 Domain generation
 
@@ -88,7 +90,7 @@ Product components are under `com.shopsphere.datagen.product`:
 
 Source: `src/main/scala/com/shopsphere/datagen/Main.scala`
 
-The current `Main.main` path performs these operations:
+The verified `Main.main` path performs these operations:
 
 1. Logs application startup.
 2. Selects HOCON configuration.
@@ -98,15 +100,47 @@ The current `Main.main` path performs these operations:
 6. Creates `CustomerIdentityGenerator`.
 7. Creates `CustomerGenerator`.
 8. Generates one customer.
+9. Loads geography reference data and validates its integrity.
+10. Loads product reference data and constructs `ProductReferenceData`.
+11. Creates `CustomerGraphGenerator` with the generated customer, reference data, seeded random generator, ID generators, and `customerConfig.lifecycle.asOfDate`.
+12. Generates two addresses, two orders, and two order items per order.
+13. Validates the generated graph using `CustomerGraphValidator`.
+14. Logs validation success and a concise graph summary.
 
-The current entry point does not:
-- Invoke `CustomerGraphGenerator`.
-- Load geography reference data for graph generation.
-- Load product reference data for graph generation.
-- Generate a full set of addresses, orders, order items, and payments.
-- Persist or export the generated customer to an output file or database in the inspected code path.
+The generated graph is retained in memory. The verified execution path does not persist or export it to a database or file.
 
-These observations describe the inspected source path, not every capability available in the repository.
+### 3.1 Verified execution result
+
+The application completed successfully with random seed `42L`.
+
+Observed summary from the verified run:
+
+| Entity or operation | Result |
+|---|---:|
+| Customer ID | `CUST000001` |
+| Addresses | 2 |
+| Orders | 2 |
+| Order items | 4 |
+| Payments | 3 |
+| Products loaded | 10 |
+| Geography validation | Passed |
+| Customer graph validation | Passed |
+
+The number of payments depends on the generated payment-attempt outcome rather than a fixed payment-count parameter.
+
+### 3.2 Verification commands
+
+The following commands completed successfully during Milestone 1 verification:
+
+```powershell
+sbt compile
+sbt "Test / testFull"
+sbt run
+```
+
+The full test run completed with 57 tests across 20 suites and zero failures. The application run logged `Customer graph validation passed` and printed the graph summary.
+
+These results apply to the working tree tested at that time. The exact Git revision should be recorded separately before attributing the verification to a specific commit.
 
 ## 4. Customer graph generation flow
 
@@ -121,7 +155,7 @@ Source: `customer/generator/CustomerGraphGenerator.scala`
 - A `PaymentIdGenerator`.
 - An as-of date.
 
-A secondary constructor supplies a new `PaymentIdGenerator` and defaults the as-of date to `2026-01-01`.
+The graph-generation path in `Main` explicitly supplies `customerConfig.lifecycle.asOfDate`. It does not rely on the secondary constructor that defaults the as-of date to `2026-01-01`.
 
 Its `generate(addressCount, orderCount, orderItemCount)` method follows this sequence:
 
@@ -135,6 +169,21 @@ Its `generate(addressCount, orderCount, orderItemCount)` method follows this seq
 8. Collects the customer, addresses, orders, order items, and payments into a `CustomerGraph`.
 
 The method accepts counts for addresses, orders, and order items per order. The number of payments is determined by the generated payment-attempt outcome rather than by a separate payment-count parameter.
+
+### 4.1 Graph validation
+
+`CustomerGraphValidator` validates the generated graph against geography and product reference data and the configured as-of date.
+
+The validation path checks the graph's key invariants, including:
+- Customer identity and lifecycle date constraints.
+- Address relationships and references to known buildings and postal codes.
+- Order relationships and date constraints.
+- Order-item references, product references, quantities, prices, identifiers, and item counts.
+- Consistency between order totals and the sum of order-item totals.
+- Payment references, identifiers, amounts, and date constraints.
+- Duplicate identifiers within relevant entity collections.
+
+Validation failures raise exceptions rather than allowing `Main` to log a successful graph-validation result.
 
 ## 5. Identifier generation and sequence scope
 
@@ -154,13 +203,9 @@ See ADR-0001 for the full identifier rules.
 
 ## 6. Randomness and deterministic parallel generation
 
-`Main` currently constructs `RandomGenerator` with seed `42L`. The graph
-generator passes a random generator to multiple domain generators. A fixed
-seed does not by itself guarantee identical results under different parallel
-scheduling patterns.
+`Main` currently constructs `RandomGenerator` with seed `42L`. The graph generator passes a random generator to multiple domain generators. A fixed seed does not by itself guarantee identical results under different parallel scheduling patterns.
 
-[ADR-0003](decisions/ADR-0003-deterministic-parallel-generation.md) records
-the accepted design for deterministic parallel generation:
+[ADR-0003](decisions/ADR-0003-deterministic-parallel-generation.md) records the accepted design for deterministic parallel generation:
 
 - One independent random stream per logical chunk.
 - An initial chunk size of 10,000 customers.
@@ -170,22 +215,26 @@ the accepted design for deterministic parallel generation:
 - Deterministic chunk output ordering.
 - Canonical output equality across worker counts as a test requirement.
 
-The design is not yet implemented or verified. The seed-derivation algorithm
-must be specified and tested during implementation. The guarantee is scoped
-to fixed inputs, chunk size, seed derivation, generator version, and random
-draw order. Changes to those inputs or rules may change generated values.
+The design is not yet implemented or verified. The seed-derivation algorithm must be specified and tested during implementation. The guarantee is scoped to fixed inputs, chunk size, seed derivation, generator version, and random draw order. Changes to those inputs or rules may change generated values.
+
 ## 7. Architectural status and boundaries
 
 | Capability | Observed status |
 |---|---|
 | Format-specific configuration readers | Implemented |
 | Customer configuration loading | Implemented |
-| Single-customer generation in `Main` | Wired into the entry point |
+| Single-customer generation in `Main` | Wired and verified |
+| Geography reference-data loading and validation | Wired and verified |
+| Product reference-data loading | Wired and verified |
 | Customer graph orchestration | Implemented and unit-tested |
-| Graph generation in `Main` | Not wired into the inspected entry point |
-| End-to-end graph output verification | Not established by the current unit-test result |
-| Database or file export from `Main` | Not present in the inspected execution path |
-| Deterministic parallel generation contract | Defined in ADR-0003; implementation and verification pending |
+| Graph generation in `Main` | Wired and verified |
+| Graph validation in `Main` | Wired and verified |
+| End-to-end single-customer graph generation | Verified by `sbt run` |
+| Database or file export from `Main` | Not implemented in the verified execution path |
+| Multi-customer batch generation | Outside Milestone 1 |
+| Deterministic parallel generation | Defined in ADR-0003; implementation and verification pending |
+
+Milestone 1 verification used `sbt compile`, `sbt "Test / testFull"`, and `sbt run`. The test run completed with 57 tests across 20 suites and zero failures.
 
 The distinction between implementation, unit testing, application wiring, and end-to-end verification must be maintained when assessing project readiness.
 
