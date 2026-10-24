@@ -114,4 +114,54 @@ class CustomerGeneratorTest extends AnyFunSuite {
         fail(s"Unexpected acquisition channel: $other")
     }
   }
+
+  test("should generate customer with an explicit global ordinal") {
+    val customerConfig = loadCustomerConfig()
+    val randomGenerator = new RandomGenerator(42L)
+
+    val generator = new CustomerGenerator(
+      customerConfig,
+      randomGenerator,
+      new CustomerIdentityGenerator(randomGenerator)
+    )
+
+    assert(generator.generate(10001L).id == "CUST010001")
+  }
+
+  test("explicit customer ordinals should not depend on call order") {
+    val customerConfig = loadCustomerConfig()
+
+    def createGenerator(seed: Long) = {
+      val randomGenerator = new RandomGenerator(seed)
+      new CustomerGenerator(
+        customerConfig,
+        randomGenerator,
+        new CustomerIdentityGenerator(randomGenerator)
+      )
+    }
+
+    val first = createGenerator(42L)
+    val second = createGenerator(42L)
+
+    assert(first.generate(2L).id == "CUST000002")
+    assert(first.generate(10001L).id == "CUST010001")
+
+    assert(second.generate(10001L).id == "CUST010001")
+    assert(second.generate(2L).id == "CUST000002")
+  }
+
+  test("explicit customer generation should reject non-positive ordinals") {
+    val customerConfig = loadCustomerConfig()
+    val randomGenerator = new RandomGenerator(42L)
+
+    val generator = new CustomerGenerator(
+      customerConfig,
+      randomGenerator,
+      new CustomerIdentityGenerator(randomGenerator)
+    )
+
+    assertThrows[IllegalArgumentException] {
+      generator.generate(0L)
+    }
+  }
 }

@@ -107,8 +107,12 @@ class CustomerGenerator(
       randomGenerator
     )
 
-  override def generate(): Customer = {
-    val customerId = generateCustomerId()
+  override def generate(): Customer =
+    generate(nextCustomerId.getAndIncrement())
+
+
+  def generate(ordinal: Long): Customer = {
+    val customerId = CustomerIdGenerator.generate(ordinal)
     val firstName = identityGenerator.generateFirstName()
     val lastName = identityGenerator.generateLastName()
     val email = identityGenerator.generateEmail(firstName, lastName)
@@ -144,10 +148,6 @@ class CustomerGenerator(
       preferredDevice = preferredDevice.name,
       preferredPaymentMethod = preferredPaymentMethod.name
     )
-  }
-
-  private def generateCustomerId(): String = {
-    CustomerIdGenerator.generate(nextCustomerId.getAndIncrement())
   }
 
   private def generateAge(

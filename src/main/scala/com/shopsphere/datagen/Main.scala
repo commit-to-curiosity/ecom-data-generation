@@ -1,19 +1,25 @@
+
 package com.shopsphere.datagen
 
 import com.shopsphere.datagen.address.model.AddressExport
 import com.shopsphere.datagen.common.config.{ConfigReaderFactory, DataGenerationConstants}
-import com.shopsphere.datagen.common.distribution.RandomGenerator
 import com.shopsphere.datagen.common.enums.ConfigFileFormat
 import com.shopsphere.datagen.common.json.JsonMapper
-import com.shopsphere.datagen.common.output.{JsonLinesWriter, RunOutputPublisher}
+import com.shopsphere.datagen.common.output.{
+  JsonLinesStreamWriter,
+  RunOutputPublisher
+}
+import com.shopsphere.datagen.common.parallel.{
+  CustomerChunkGenerator,
+  GenerationChunkPlanner,
+  GenerationRunConfig,
+  ParallelChunkExecutor
+}
 import com.shopsphere.datagen.customer.config.CustomerConfig
-import com.shopsphere.datagen.customer.generator.{CustomerGenerator, CustomerGraphGenerator, CustomerIdentityGenerator}
 import com.shopsphere.datagen.customer.loader.CustomerLoaderFactory
-import com.shopsphere.datagen.customer.validation.CustomerGraphValidator
 import com.shopsphere.datagen.geography.loader.GeographyLoader
+import com.shopsphere.datagen.geography.reference.GeographyReferenceData
 import com.shopsphere.datagen.geography.validation.GeographyValidator
-import com.shopsphere.datagen.order.generator.OrderItemIdGenerator
-import com.shopsphere.datagen.payment.generator.PaymentIdGenerator
 import com.shopsphere.datagen.product.loader.ProductLoader
 import com.shopsphere.datagen.product.reference.ProductReferenceData
 import org.apache.logging.log4j.LogManager
@@ -35,11 +41,16 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     val outputRoot =
-      args.headOption
-        .map(Paths.get(_))
-        .getOrElse(DefaultOutputRoot)
+      args.headOption.map(Paths.get(_)).getOrElse(DefaultOutputRoot)
+
+    val runConfig = GenerationRunConfig()
 
     logger.info("ShopSphere E-Commerce Data Generator started")
+    logger.info(s"Master seed: ${runConfig.masterSeed}")
+    logger.info(s"Total customers: ${runConfig.totalCustomers}")
+    logger.info(s"Chunk size: ${runConfig.chunkSize}")
+    logger.info(s"Parallelism: ${runConfig.parallelism}")
+    logger.info(s"Max in-flight chunks: ${runConfig.maxInFlight}")
 
     val configFormat = ConfigFileFormat.HOCON
     logger.info(s"Configuration format: ${configFormat.name}")
@@ -55,21 +66,6 @@ object Main {
 
     logger.info("Customer configuration loaded successfully")
 
-    val randomSeed = 42L
-    logger.info(s"Random seed: $randomSeed")
-
-    val randomGenerator = new RandomGenerator(randomSeed)
-    val identityGenerator = new CustomerIdentityGenerator(randomGenerator)
-
-    val customerGenerator = new CustomerGenerator(
-      customerConfig,
-      randomGenerator,
-      identityGenerator
-    )
-
-    val customer = customerGenerator.generate()
-    logger.info(s"Customer generated: ${customer.id}")
-
     val geographyReferenceData = new GeographyLoader().load()
     new GeographyValidator(geographyReferenceData).validate()
     logger.info("Geography reference data loaded and validated")
@@ -80,103 +76,99 @@ object Main {
     val productReferenceData = new ProductReferenceData(products)
     logger.info(s"Product reference data loaded: ${products.size} products")
 
-    val graphGenerator = new CustomerGraphGenerator(
-      customer,
-      geographyReferenceData,
-      productReferenceData,
-      randomGenerator,
-      new OrderItemIdGenerator(),
-      new PaymentIdGenerator(),
-      customerConfig.lifecycle.asOfDate
-    )
-
-    val graph = graphGenerator.generate(
+    val chunkGenerator = new CustomerChunkGenerator(
+      customerConfig = customerConfig,
+      geographyReferenceData = geographyReferenceData,
+      productReferenceData = productReferenceData,
       addressCount = AddressCount,
       orderCount = OrderCount,
-      orderItemCount = OrderItemCountPerOrder
-    )
-
-    new CustomerGraphValidator(
-      geographyReferenceData,
-      productReferenceData,
-      customerConfig.lifecycle.asOfDate
-    ).validate(
-      graph,
-      expectedOrderItemCount = OrderItemCountPerOrder
-    )
-
-    logger.info("Customer graph validation passed")
-
-    logger.info(
-      s"""Customer graph generated:
-         |customerId=${graph.customer.id}
-         |addresses=${graph.addresses.size}
-         |orders=${graph.orders.size}
-         |orderItems=${graph.orderItems.size}
-         |payments=${graph.payments.size}""".stripMargin
+      orderItemCountPerOrder = OrderItemCountPerOrder
     )
 
     val timestamp =
       LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
     val runId = s"${timestamp}_${UUID.randomUUID().toString.take(8)}"
 
-    val jsonLinesWriter = new JsonLinesWriter(JsonMapper.mapper)
     val publisher = new RunOutputPublisher()
 
-    val addressExports: Seq[AddressExport] =
-      graph.addresses.map { address =>
-        val location = geographyReferenceData
-          .resolveBuilding(address.buildingId)
-          .getOrElse {
-            throw new IllegalStateException(
-              s"Unable to resolve building '${address.buildingId}' for address '${address.id}'"
+    val publishedRun = publisher.publish(outputRoot, runId) {
+      temporaryDirectory =>
+        val streamWriter =
+          new JsonLinesStreamWriter(JsonMapper.mapper, temporaryDirectory)
+
+        try {
+          // Create all five files even when totalCustomers is zero.
+          streamWriter.write("customers.jsonl", Seq.empty[Any])
+          streamWriter.write("addresses.jsonl", Seq.empty[Any])
+          streamWriter.write("orders.jsonl", Seq.empty[Any])
+          streamWriter.write("order_items.jsonl", Seq.empty[Any])
+          streamWriter.write("payments.jsonl", Seq.empty[Any])
+
+          val chunks = GenerationChunkPlanner.plan(
+            totalCustomers = runConfig.totalCustomers,
+            chunkSize = runConfig.chunkSize
+          )
+
+          val executor = new ParallelChunkExecutor(
+            parallelism = runConfig.parallelism,
+            maxInFlight = runConfig.maxInFlight
+          )
+
+          executor.execute(chunks) { chunk =>
+            chunkGenerator.generate(chunk, runConfig.masterSeed)
+          } { (chunk, graphs) =>
+            val customers = graphs.map(_.customer)
+
+            val addresses: Seq[AddressExport] =
+              graphs.flatMap { graph =>
+                graph.addresses.map { address =>
+                  val location = geographyReferenceData
+                    .resolveBuilding(address.buildingId)
+                    .getOrElse {
+                      throw new IllegalStateException(
+                        s"Unable to resolve building '${address.buildingId}' " +
+                          s"for address '${address.id}'"
+                      )
+                    }
+
+                  AddressExport(
+                    id = address.id,
+                    customerId = address.customerId,
+                    buildingId = address.buildingId,
+                    unitNumber = address.unitNumber,
+                    postalCode = address.postalCode,
+                    buildingName = location.building.name,
+                    societyName = location.society.name,
+                    roadName = location.road.name,
+                    areaName = location.area.name,
+                    cityName = location.city.name,
+                    stateName = location.state.name,
+                    countryName = location.country.name
+                  )
+                }
+              }
+
+            val orders = graphs.flatMap(_.orders)
+            val orderItems = graphs.flatMap(_.orderItems)
+            val payments = graphs.flatMap(_.payments)
+
+            streamWriter.write("customers.jsonl", customers)
+            streamWriter.write("addresses.jsonl", addresses)
+            streamWriter.write("orders.jsonl", orders)
+            streamWriter.write("order_items.jsonl", orderItems)
+            streamWriter.write("payments.jsonl", payments)
+
+            logger.info(
+              s"Chunk ${chunk.index} completed: " +
+                s"firstCustomerOrdinal=${chunk.firstCustomerOrdinal}, " +
+                s"customers=${graphs.size}"
             )
           }
 
-        AddressExport(
-          id = address.id,
-          customerId = address.customerId,
-          buildingId = address.buildingId,
-          unitNumber = address.unitNumber,
-          postalCode = address.postalCode,
-          buildingName = location.building.name,
-          societyName = location.society.name,
-          roadName = location.road.name,
-          areaName = location.area.name,
-          cityName = location.city.name,
-          stateName = location.state.name,
-          countryName = location.country.name
-        )
-      }
-
-    val publishedRun = publisher.publish(outputRoot, runId) { temporaryDirectory =>
-      Map(
-        "customers.jsonl" ->
-          jsonLinesWriter.write(
-            temporaryDirectory.resolve("customers.jsonl"),
-            List(graph.customer)
-          ),
-        "addresses.jsonl" ->
-          jsonLinesWriter.write(
-            temporaryDirectory.resolve("addresses.jsonl"),
-            addressExports
-          ),
-        "orders.jsonl" ->
-          jsonLinesWriter.write(
-            temporaryDirectory.resolve("orders.jsonl"),
-            graph.orders
-          ),
-        "order_items.jsonl" ->
-          jsonLinesWriter.write(
-            temporaryDirectory.resolve("order_items.jsonl"),
-            graph.orderItems
-          ),
-        "payments.jsonl" ->
-          jsonLinesWriter.write(
-            temporaryDirectory.resolve("payments.jsonl"),
-            graph.payments
-          )
-      )
+          streamWriter.recordCounts
+        } finally {
+          streamWriter.close()
+        }
     }
 
     logger.info(
