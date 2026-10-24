@@ -5,15 +5,19 @@ class WeightedDistribution[T](
                                randomGenerator: RandomGenerator
                              ) extends Distribution[T] {
 
-  require(values.nonEmpty, "Weighted distribution values must not be empty")
   require(
-    values.forall { case (_, weight) => weight >= 0.0 },
-    "Weighted distribution weights must not be negative"
+    values.forall { case (_, weight) =>
+      !weight.isNaN && !weight.isInfinity && weight >= 0.0
+    },
+    "Weighted distribution weights must be finite and non-negative"
   )
 
   private val totalWeight = values.map(_._2).sum
 
-  require(totalWeight > 0.0, "Weighted distribution total weight must be positive")
+  require(
+    !totalWeight.isNaN && !totalWeight.isInfinity && totalWeight > 0.0,
+    "Weighted distribution total weight must be finite and positive"
+  )
 
   override def sample(): T = {
     val randomValue = randomGenerator.nextDouble() * totalWeight

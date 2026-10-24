@@ -2,7 +2,10 @@
 package com.shopsphere.datagen
 
 import com.shopsphere.datagen.address.model.AddressExport
-import com.shopsphere.datagen.common.config.{ConfigReaderFactory, DataGenerationConstants}
+import com.shopsphere.datagen.common.config.{
+  ConfigReaderFactory,
+  DataGenerationConstants
+}
 import com.shopsphere.datagen.common.enums.ConfigFileFormat
 import com.shopsphere.datagen.common.json.JsonMapper
 import com.shopsphere.datagen.common.output.{
@@ -18,10 +21,10 @@ import com.shopsphere.datagen.common.parallel.{
 import com.shopsphere.datagen.customer.config.CustomerConfig
 import com.shopsphere.datagen.customer.loader.CustomerLoaderFactory
 import com.shopsphere.datagen.geography.loader.GeographyLoader
-import com.shopsphere.datagen.geography.reference.GeographyReferenceData
 import com.shopsphere.datagen.geography.validation.GeographyValidator
 import com.shopsphere.datagen.product.loader.ProductLoader
 import com.shopsphere.datagen.product.reference.ProductReferenceData
+import com.shopsphere.datagen.scenario.GenerationScenarioLoader
 import org.apache.logging.log4j.LogManager
 
 import java.nio.file.{Path, Paths}
@@ -34,8 +37,6 @@ object Main {
   private val logger = LogManager.getLogger(getClass)
 
   private val AddressCount = 2
-  private val OrderCount = 2
-  private val OrderItemCountPerOrder = 2
 
   private val DefaultOutputRoot: Path = Paths.get("data", "raw")
 
@@ -55,10 +56,14 @@ object Main {
     val configFormat = ConfigFileFormat.HOCON
     logger.info(s"Configuration format: ${configFormat.name}")
 
-    val configReader = ConfigReaderFactory.createConfigReader(configFormat)
+    val configReader =
+      ConfigReaderFactory.createConfigReader(configFormat)
+
     val config = configReader.readConfigFile
 
-    val customerConfigLoader = CustomerLoaderFactory.createCustomerConfigLoader()
+    val customerConfigLoader =
+      CustomerLoaderFactory.createCustomerConfigLoader()
+
     val customerConfig: CustomerConfig =
       customerConfigLoader.loadConfiguration(
         config.getConfig(DataGenerationConstants.CUSTOMER)
@@ -66,35 +71,73 @@ object Main {
 
     logger.info("Customer configuration loaded successfully")
 
-    val geographyReferenceData = new GeographyLoader().load()
+    val geographyReferenceData =
+      new GeographyLoader().load()
+
     new GeographyValidator(geographyReferenceData).validate()
+
     logger.info("Geography reference data loaded and validated")
 
     val products = new ProductLoader().load()
-    require(products.nonEmpty, "Product reference data must not be empty")
 
-    val productReferenceData = new ProductReferenceData(products)
-    logger.info(s"Product reference data loaded: ${products.size} products")
-
-    val chunkGenerator = new CustomerChunkGenerator(
-      customerConfig = customerConfig,
-      geographyReferenceData = geographyReferenceData,
-      productReferenceData = productReferenceData,
-      addressCount = AddressCount,
-      orderCount = OrderCount,
-      orderItemCountPerOrder = OrderItemCountPerOrder
+    require(
+      products.nonEmpty,
+      "Product reference data must not be empty"
     )
 
+    val productReferenceData =
+      new ProductReferenceData(products)
+
+    logger.info(
+      s"Product reference data loaded: ${products.size} products"
+    )
+
+    // Load and validate the selected scenario exactly once.
+    val scenarioLoader =
+      new GenerationScenarioLoader(productReferenceData)
+
+    val scenarioName =
+      args.lift(1).map(_.trim).filter(_.nonEmpty)
+
+    val scenario =
+      scenarioName match {
+        case Some(name) => scenarioLoader.load(name)
+        case None       => scenarioLoader.loadDefault()
+      }
+
+    logger.info(s"Generation scenario: ${scenario.name}")
+    logger.info(s"Orders per customer: ${scenario.ordersPerCustomer}")
+    logger.info(s"Items per order: ${scenario.itemsPerOrder}")
+    logger.info(
+      s"Product selection strategy: ${scenario.productSelection.strategy}"
+    )
+
+    val chunkGenerator =
+      new CustomerChunkGenerator(
+        customerConfig = customerConfig,
+        geographyReferenceData = geographyReferenceData,
+        productReferenceData = productReferenceData,
+        addressCount = AddressCount,
+        scenario = scenario
+      )
+
     val timestamp =
-      LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
-    val runId = s"${timestamp}_${UUID.randomUUID().toString.take(8)}"
+      LocalDateTime.now().format(
+        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+      )
+
+    val runId =
+      s"${timestamp}_${UUID.randomUUID().toString.take(8)}"
 
     val publisher = new RunOutputPublisher()
 
     val publishedRun = publisher.publish(outputRoot, runId) {
       temporaryDirectory =>
         val streamWriter =
-          new JsonLinesStreamWriter(JsonMapper.mapper, temporaryDirectory)
+          new JsonLinesStreamWriter(
+            JsonMapper.mapper,
+            temporaryDirectory
+          )
 
         try {
           // Create all five files even when totalCustomers is zero.
@@ -104,32 +147,36 @@ object Main {
           streamWriter.write("order_items.jsonl", Seq.empty[Any])
           streamWriter.write("payments.jsonl", Seq.empty[Any])
 
-          val chunks = GenerationChunkPlanner.plan(
-            totalCustomers = runConfig.totalCustomers,
-            chunkSize = runConfig.chunkSize
-          )
+          val chunks =
+            GenerationChunkPlanner.plan(
+              totalCustomers = runConfig.totalCustomers,
+              chunkSize = runConfig.chunkSize
+            )
 
-          val executor = new ParallelChunkExecutor(
-            parallelism = runConfig.parallelism,
-            maxInFlight = runConfig.maxInFlight
-          )
+          val executor =
+            new ParallelChunkExecutor(
+              parallelism = runConfig.parallelism,
+              maxInFlight = runConfig.maxInFlight
+            )
 
           executor.execute(chunks) { chunk =>
             chunkGenerator.generate(chunk, runConfig.masterSeed)
           } { (chunk, graphs) =>
+
             val customers = graphs.map(_.customer)
 
             val addresses: Seq[AddressExport] =
               graphs.flatMap { graph =>
                 graph.addresses.map { address =>
-                  val location = geographyReferenceData
-                    .resolveBuilding(address.buildingId)
-                    .getOrElse {
-                      throw new IllegalStateException(
-                        s"Unable to resolve building '${address.buildingId}' " +
-                          s"for address '${address.id}'"
-                      )
-                    }
+                  val location =
+                    geographyReferenceData
+                      .resolveBuilding(address.buildingId)
+                      .getOrElse {
+                        throw new IllegalStateException(
+                          s"Unable to resolve building '${address.buildingId}' " +
+                            s"for address '${address.id}'"
+                        )
+                      }
 
                   AddressExport(
                     id = address.id,

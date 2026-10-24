@@ -14,6 +14,7 @@ import com.shopsphere.datagen.geography.reference.GeographyReferenceData
 import com.shopsphere.datagen.order.generator.OrderItemIdGenerator
 import com.shopsphere.datagen.payment.generator.PaymentIdGenerator
 import com.shopsphere.datagen.product.reference.ProductReferenceData
+import com.shopsphere.datagen.scenario.GenerationScenario
 
 /**
  * Generates complete customer graphs for one deterministic chunk.
@@ -26,16 +27,11 @@ class CustomerChunkGenerator(
                               geographyReferenceData: GeographyReferenceData,
                               productReferenceData: ProductReferenceData,
                               addressCount: Int,
-                              orderCount: Int,
-                              orderItemCountPerOrder: Int
+                              scenario: GenerationScenario
                             ) {
 
   require(addressCount >= 0, "Address count must not be negative")
-  require(orderCount >= 0, "Order count must not be negative")
-  require(
-    orderItemCountPerOrder >= 0,
-    "Order-item count must not be negative"
-  )
+  require(scenario != null, "Generation scenario must not be null")
 
   private val asOfDate = customerConfig.lifecycle.asOfDate
 
@@ -81,19 +77,20 @@ class CustomerChunkGenerator(
           randomGenerator,
           new OrderItemIdGenerator(),
           new PaymentIdGenerator(),
-          asOfDate
+          asOfDate,
+          scenario
         )
 
       val graph =
         graphGenerator.generate(
           addressCount = addressCount,
-          orderCount = orderCount,
-          orderItemCount = orderItemCountPerOrder
+          orderCount = scenario.ordersPerCustomer,
+          orderItemCount = scenario.itemsPerOrder
         )
 
       graphValidator.validate(
         graph,
-        expectedOrderItemCount = orderItemCountPerOrder
+        expectedOrderItemCount = scenario.itemsPerOrder
       )
 
       graphs += graph

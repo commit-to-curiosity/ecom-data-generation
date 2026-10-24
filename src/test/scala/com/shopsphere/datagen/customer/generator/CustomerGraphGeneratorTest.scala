@@ -1,13 +1,15 @@
+
 package com.shopsphere.datagen.customer.generator
 
 import com.shopsphere.datagen.common.distribution.RandomGenerator
-import com.shopsphere.datagen.common.enums.{PaymentAttemptOutcome, PaymentStatus}
+import com.shopsphere.datagen.common.enums.PaymentAttemptOutcome
 import com.shopsphere.datagen.customer.model.Customer
 import com.shopsphere.datagen.geography.loader.GeographyLoader
 import com.shopsphere.datagen.order.generator.OrderItemIdGenerator
 import com.shopsphere.datagen.payment.generator.PaymentIdGenerator
 import com.shopsphere.datagen.product.loader.ProductLoader
 import com.shopsphere.datagen.product.reference.ProductReferenceData
+import com.shopsphere.datagen.scenario.GenerationScenarioLoader
 import org.scalatest.funsuite.AnyFunSuite
 
 import java.time.LocalDate
@@ -43,6 +45,9 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
         new ProductLoader().load()
       )
 
+    val scenario =
+      new GenerationScenarioLoader(productReferenceData).loadDefault()
+
     val graph =
       new CustomerGraphGenerator(
         customer,
@@ -51,7 +56,8 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
         randomGenerator,
         new OrderItemIdGenerator(),
         new PaymentIdGenerator(),
-        LocalDate.of(2026, 1, 1)
+        LocalDate.of(2026, 1, 1),
+        scenario
       ).generate(
         addressCount = 2,
         orderCount = 2,
@@ -64,8 +70,15 @@ class CustomerGraphGeneratorTest extends AnyFunSuite {
     assert(graph.orders.size == 2)
     assert(graph.orderItems.size == 4)
     assert(graph.payments.nonEmpty)
-    assert(graph.orderItems.map(_.id).distinct.size == graph.orderItems.size)
-    assert(graph.payments.map(_.id).distinct.size == graph.payments.size)
+
+    assert(
+      graph.orderItems.map(_.id).distinct.size ==
+        graph.orderItems.size
+    )
+    assert(
+      graph.payments.map(_.id).distinct.size ==
+        graph.payments.size
+    )
 
     assert(
       graph.addresses.forall(_.customerId == customer.id)

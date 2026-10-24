@@ -1,12 +1,22 @@
+
 package com.shopsphere.datagen.customer.generator
 
 import com.shopsphere.datagen.address.generator.AddressGenerator
 import com.shopsphere.datagen.common.distribution.RandomGenerator
 import com.shopsphere.datagen.customer.model.{Customer, CustomerGraph}
 import com.shopsphere.datagen.geography.reference.GeographyReferenceData
-import com.shopsphere.datagen.order.generator.{OrderGenerator, OrderItemGenerator, OrderItemIdGenerator}
-import com.shopsphere.datagen.payment.generator.{PaymentAttemptOutcomeGenerator, PaymentGenerator, PaymentIdGenerator}
+import com.shopsphere.datagen.order.generator.{
+  OrderGenerator,
+  OrderItemGenerator,
+  OrderItemIdGenerator
+}
+import com.shopsphere.datagen.payment.generator.{
+  PaymentAttemptOutcomeGenerator,
+  PaymentGenerator,
+  PaymentIdGenerator
+}
 import com.shopsphere.datagen.product.reference.ProductReferenceData
+import com.shopsphere.datagen.scenario.GenerationScenario
 
 import java.time.LocalDate
 
@@ -17,30 +27,21 @@ class CustomerGraphGenerator(
                               randomGenerator: RandomGenerator,
                               orderItemIdGenerator: OrderItemIdGenerator,
                               paymentIdGenerator: PaymentIdGenerator,
-                              asOfDate: LocalDate
+                              asOfDate: LocalDate,
+                              scenario: GenerationScenario
                             ) {
 
-  def this(
-            customer: Customer,
-            geographyReferenceData: GeographyReferenceData,
-            productReferenceData: ProductReferenceData,
-            randomGenerator: RandomGenerator,
-            orderItemIdGenerator: OrderItemIdGenerator
-          ) = this(
-    customer,
-    geographyReferenceData,
-    productReferenceData,
-    randomGenerator,
-    orderItemIdGenerator,
-    new PaymentIdGenerator(),
-    LocalDate.of(2026, 1, 1)
-  )
+  require(scenario != null, "Generation scenario must not be null")
 
   def generate(
                 addressCount: Int,
                 orderCount: Int,
                 orderItemCount: Int
               ): CustomerGraph = {
+
+    require(addressCount >= 0, "Address count must not be negative")
+    require(orderCount >= 0, "Order count must not be negative")
+    require(orderItemCount >= 0, "Order-item count must not be negative")
 
     val addressGenerator =
       new AddressGenerator(
@@ -63,7 +64,8 @@ class CustomerGraphGenerator(
 
     val paymentAttemptOutcomeGenerator =
       new PaymentAttemptOutcomeGenerator(
-        randomGenerator
+        randomGenerator,
+        scenario.paymentOutcomeWeights
       )
 
     val generatedOrders =
@@ -77,7 +79,8 @@ class CustomerGraphGenerator(
             generatedOrder,
             productReferenceData,
             randomGenerator,
-            orderItemIdGenerator
+            orderItemIdGenerator,
+            scenario.productSelection
           )
 
         val orderItems =
