@@ -1,7 +1,7 @@
 # Project State
 
-Last updated: 2026-10-14
-Status: Canonical hierarchical identifier contract implemented and tested on `main`. Further architecture and integration work remains.
+Last updated: 2026-10-24
+Status: Milestone 1 completed and verified. Phase 2 sequential JSONL export is implemented and verified; further integration hardening and architecture work remain.
 
 ## 1. Project identity
 - Name: ShopSphere E-Commerce Data Generator
@@ -57,6 +57,9 @@ The implementation includes these areas:
 - `orderitem`: order-item model, ID generation, and generator.
 - `payment`: payment model, ID generation, generator, and payment-attempt outcome generation.
 - `Main.scala`: application entry point.
+- `common.json`: shared Jackson JSON mapper with snake_case field naming and ISO date serialization.
+- `common.output`: JSON Lines writer and run output publisher, including record counts and cleanup of temporary output after failures.
+- Address export: enriched address records containing building, society, road, area, city, state, and country information.
 
 Relevant data resources include geography reference JSON, product reference JSON, and configuration examples in `conf/hocon`, `conf/json`, and `conf/yaml`.
 
@@ -196,82 +199,138 @@ The test result applies to the implementation working tree that was subsequently
 
 The Git revision was not included in the supplied command output. Do not attribute these results to a particular commit until the revision is checked.
 
+### Phase 2 verification — 2026-10-24
+
+- `sbt compile`: passed after the address export changes.
+- `sbt "Test / testFull"`: 67 tests passed across 24 suites; 0 failures.
+- `sbt run`: completed successfully.
+- `sbt "run data/exports"`: completed successfully with a custom output root.
+- Generated output contained five JSONL files: customers, addresses, orders, order items, and payments.
+- Inspected address records included building, society, road, area, city, state, and country fields.
+- An integration-style test verified the five output files, JSON object validity, record counts, and address enrichment.
+- Windows symbolic-link warnings were present but did not prevent successful execution.
+- Exact Git revision: not recorded in the supplied verification output.
+
 ## 11. Immediate next steps
 
-1. Review the current Git state and confirm the exact revision containing the completed Milestone 1 implementation.
-2. Document and agree on the Phase 2 output contract before implementing persistence.
-3. Implement the sequential end-to-end generation and writing pipeline.
-4. Add automated tests for serialization, output structure, validation failures, and writing failures.
-5. Run the full SBT verification suite and record the exact Git revision tested.
-6. Update project state and architecture documentation to reflect the verified implementation.
-7. Commit the documentation and implementation changes in appropriately scoped commits.
-8. Revisit the known `asOfDate` lifecycle-boundary behavior.
-9. Implement deterministic parallel generation in accordance with ADR-0003 when its prerequisites and scope are addressed.
+1. Review the current Git state and record the exact revision containing the verified Phase 2 implementation.
+2. Add a full application-level integration test covering generation, validation, serialization, and publication.
+3. Expand failure-path testing to cover serialization errors and filesystem failures, including confirmation that failed runs are not published.
+4. Review output configuration and validation, including behavior for invalid command-line paths.
+5. Revisit the known `asOfDate` lifecycle-boundary behavior.
+6. Continue architecture documentation and review.
+7. Implement deterministic parallel generation in accordance with ADR-0003 when its prerequisites and scope are addressed.
+8. Recheck the `main-gradle` branch separately; successful SBT verification on `main` does not verify the Gradle branch.
 
 Do not treat a planned capability as implemented until source inspection, automated tests, and end-to-end verification support that claim.
 
 ## 12. Phase 2: End-to-End Generation and Writing
 
-**Status: Planned**
+**Status: Core sequential JSONL export implemented and verified on 2026-10-24. Additional application-level integration and failure-path coverage remain pending.**
 
 ### 12.1 Objective
 
-Extend the verified Milestone 1 single-customer graph-generation path into an end-to-end pipeline that persists validated generated data to the filesystem and reports the outcome of the run.
+Extend the verified Milestone 1 single-customer graph-generation path into a sequential pipeline that validates generated data, serializes the graph into JSON Lines files, publishes completed run output, and reports record counts and output location.
 
-The initial implementation will remain sequential. It will preserve the existing entity identifier contract, seeded random-generation behavior, configuration loading, reference-data validation, graph generation, and graph validation.
+The implementation preserves the existing entity identifier contract, customer configuration loading, seeded random generation, reference-data validation, graph generation, and graph validation.
 
-### 12.2 Planned execution flow
+### 12.2 Implemented execution flow
 
-1. Load application and customer configuration.
+1. Load customer configuration using the existing configuration reader.
 2. Initialize the seeded random generator.
-3. Load and validate geography reference data.
-4. Load product reference data.
-5. Generate the customer and associated entity graph.
-6. Validate the generated graph.
-7. Serialize the validated data using the agreed output format.
-8. Write output files to the configured output directory.
-9. Report output locations, entity counts, and execution status.
+3. Generate one customer and load geography and product reference data.
+4. Validate geography reference data and generate the customer graph.
+5. Validate graph relationships and generation invariants.
+6. Enrich address export records with geographic names resolved from the geography reference data.
+7. Serialize records using the shared Jackson JSON mapper.
+8. Write five JSON Lines files into a temporary run directory.
+9. Publish the completed run directory under the configured output root.
+10. Log the published output location and record counts.
 
-### 12.3 Planned deliverables
+### 12.3 Output contract
 
-- **Output contract:** Define the serialization format, file organization, naming conventions, and treatment of existing output files.
-- **Dedicated writer:** Separate filesystem operations and serialization from domain generators and `Main`.
-- **Pipeline integration:** Connect generation, validation, writing, and execution reporting.
-- **Output configuration:** Use a configurable output directory rather than scattering hardcoded filesystem paths throughout the implementation.
-- **Failure handling:** Make generation, validation, serialization, and filesystem failures visible. A failed run must not be reported as successful.
-- **Automated tests:** Cover successful writes, serialized content, output structure, relevant failure paths, and integration behavior.
-- **Verification:** Run the full SBT test suite and the application end to end, then record the exact Git revision and observed results.
+The output format is JSON Lines (JSONL), with one JSON object per line.
 
-The specific output format and atomicity guarantees must be decided before implementation. Writing should not be described as transactional or atomic unless that behavior is implemented and tested.
+Each run contains these files:
 
-### 12.4 Acceptance criteria
+| File | Contents |
+|---|---|
+| `customers.jsonl` | Customer records |
+| `addresses.jsonl` | Address records enriched with geographic names |
+| `orders.jsonl` | Order records |
+| `order_items.jsonl` | Order-item records |
+| `payments.jsonl` | Payment records |
 
-Phase 2 is complete when:
+Serialization conventions:
 
-1. The application generates the expected graph for its configured inputs.
-2. Graph validation succeeds before the validated graph is written.
-3. The agreed output files are created in the configured directory.
-4. Serialized records preserve the required entity fields, identifiers, and relationships.
-5. The execution summary reports meaningful record counts and output locations.
-6. Invalid data and output failures are handled without falsely reporting success.
-7. Automated tests verify both successful and unsuccessful execution paths.
-8. The full SBT verification suite and end-to-end execution pass.
-9. The architecture and project-state documents accurately describe the implementation and its verified limitations.
+- JSON property names use `snake_case`.
+- Date fields are serialized as ISO date strings.
+- `BigDecimal` values are represented as JSON numbers.
+- Entity identifiers and explicit relationship fields are preserved.
+- Address exports include building, society, road, area, city, state, and country names in addition to the address identifiers and postal information.
 
-### 12.5 Explicit boundaries
+### 12.4 Output configuration and publication
 
-The initial Phase 2 implementation will prioritize the existing sequential, single-customer graph path.
+The default output root is `data/raw`.
 
-The following capabilities are not automatically included in this milestone:
+The application also accepts a custom output root as its first command-line argument. For example:
+
+- `sbt run` uses `data/raw`.
+- `sbt "run data/exports"` uses `data/exports`.
+
+Each run is published under a run-specific directory named `run_<runId>`.
+
+The `JsonLinesWriter` creates parent directories when necessary, writes UTF-8 JSONL records, returns the record count, and refuses to overwrite an existing file.
+
+The `RunOutputPublisher` stages output in a temporary directory and moves the completed directory to its final run-specific location after the writer callback succeeds. If writing fails, it attempts to clean up the temporary directory and propagates the failure. It also refuses to overwrite an existing run directory.
+
+These guarantees are based on the current implementation and tests. The publisher should not be described as providing a filesystem transaction or a guaranteed atomic move unless those guarantees are explicitly implemented and verified.
+
+### 12.5 Automated tests and verification
+
+The following verification was reported for the working tree on `main` on 2026-10-24:
+
+- `sbt compile`: passed after the address export changes.
+- `sbt "Test / testFull"`: 67 tests passed across 24 suites; 0 failures.
+- `sbt run`: completed successfully.
+- `sbt "run data/exports"`: completed successfully and published output to a custom directory.
+- JSONL output inspection: all five expected files were present in a generated run directory.
+- Address output inspection: two records contained the expected geographic fields.
+- JSON syntax inspection: the generated JSONL records were successfully parsed using PowerShell `ConvertFrom-Json`.
+
+Automated test coverage includes:
+
+- JSON serialization, snake_case naming, ISO date serialization, and numeric `BigDecimal` output.
+- JSONL record writing, record counts, empty collections, and overwrite protection.
+- Successful run publication, cleanup after a simulated write failure, and existing-run protection.
+- Integration-style testing of all five JSONL files, record counts, JSON object validity, and enriched address fields.
+
+The application itself has been run successfully, but a dedicated automated test invoking the complete `Main` execution path has not yet been established.
+
+The reported test and execution results apply to the working tree at the time of verification. Record the exact Git revision before making commit-specific verification claims.
+
+### 12.6 Acceptance criteria and remaining work
+
+The core sequential export path is implemented and verified. Remaining work includes:
+
+1. Add automated application-level integration coverage for the complete generation-to-publication flow.
+2. Expand failure-path tests for serialization and filesystem errors.
+3. Verify invalid and inaccessible output paths and document their expected behavior.
+4. Ensure documentation reflects the exact implementation and its verified limitations.
+5. Rerun the full SBT verification suite after subsequent source changes and record the tested Git revision.
+
+### 12.7 Explicit boundaries
+
+The initial Phase 2 implementation remains sequential and single-customer.
+
+The following capabilities are not included in the verified Phase 2 scope:
 
 - Multi-customer batch generation.
 - Parallel or chunk-based generation.
 - Database persistence.
 - Performance optimization and large-scale benchmarking.
-- Additional output formats beyond the agreed initial format.
+- Additional output formats beyond JSONL.
 
-Parallel generation must follow ADR-0003, including deterministic chunk planning, seed derivation, bounded execution, and reproducible output ordering. The writer design should remain compatible with future chunked output without prematurely implementing parallel execution.
+Parallel generation must follow ADR-0003, including deterministic chunk planning, seed derivation, bounded execution, and reproducible output ordering.
 
-### 12.6 Relationship to Milestone 1
-
-Milestone 1 remains completed and verified as recorded in Section 7. Phase 2 extends that baseline; it does not retroactively change the scope or verification claims of Milestone 1.
+Milestone 1 remains completed and verified as recorded in Section 7. Phase 2 extends that baseline without retroactively changing Milestone 1's scope or verification claims.

@@ -13,7 +13,8 @@ lazy val root = (project in file("."))
       "org.apache.logging.log4j" % "log4j-api" % "2.26.1",
       "org.apache.logging.log4j" % "log4j-core" % "2.26.1",
       "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-yaml" % "2.20.0"
+      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-yaml" % "2.20.0",
+      "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.20.0"
     ),
 
     Compile / unmanagedResourceDirectories ++= Seq(
