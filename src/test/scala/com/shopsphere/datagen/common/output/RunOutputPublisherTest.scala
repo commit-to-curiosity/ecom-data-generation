@@ -86,4 +86,54 @@ class RunOutputPublisherTest extends AnyFunSuite {
       Files.deleteIfExists(root)
     }
   }
+
+  test("should clean up temporary output when JSON serialization fails") {
+    val root = Files.createTempDirectory("run-publisher-serialization-failure-test")
+
+    try {
+      val publisher = new RunOutputPublisher()
+      val writer = new JsonLinesWriter(
+        new com.fasterxml.jackson.databind.ObjectMapper()
+      )
+
+      intercept[com.fasterxml.jackson.core.JsonProcessingException] {
+        publisher.publish(root, "serializationFailure001") { temporaryDirectory =>
+          val path = temporaryDirectory.resolve("customers.jsonl")
+
+          writer.write(
+            path,
+            List(new Object())
+          )
+
+          Map("customers.jsonl" -> 1L)
+        }
+      }
+
+      val paths = Files.list(root)
+      try {
+        assert(!paths.findFirst().isPresent)
+      } finally {
+        paths.close()
+      }
+    } finally {
+      Files.deleteIfExists(root)
+    }
+  }
+
+  test("should fail when output root is a file") {
+    val parent = Files.createTempDirectory("run-publisher-invalid-root-test")
+    val outputRoot = parent.resolve("not-a-directory")
+    Files.write(outputRoot, Array[Byte](1))
+
+    try {
+      intercept[java.nio.file.FileSystemException] {
+        new RunOutputPublisher().publish(outputRoot, "invalidRoot001") { _ =>
+          fail("Writer must not run when output root is a file")
+        }
+      }
+    } finally {
+      Files.deleteIfExists(outputRoot)
+      Files.deleteIfExists(parent)
+    }
+  }
 }
