@@ -2,9 +2,11 @@
 
 ## 1. Purpose and scope
 
-ShopSphere E-Commerce Data Generator is a Scala 2.13.18 application for generating e-commerce domain data.
+ShopSphere E-Commerce Data Generator is a Scala 2.13.18 application for generating configurable, relationally consistent e-commerce data.
 
-This document describes the architecture observed in the source code. It distinguishes implemented components from components wired into the application entry point. The single-customer graph-generation path has been integrated and verified. Persistence, export, multi-customer batch generation, and parallel execution remain outside the scope of Milestone 1.
+The application supports customer graph generation, reference-data loading, scenario-specific business behavior, chunk-based generation, bounded parallel execution, JSON Lines (JSONL) output, and run output publication.
+
+This document describes component responsibilities and the execution pipeline. Implementation, unit-test coverage, application wiring, end-to-end verification, and statistical realism are distinct properties and must not be treated as interchangeable.
 
 ## 2. Architectural layers
 
@@ -13,232 +15,317 @@ This document describes the architecture observed in the source code. It disting
 Package: `com.shopsphere.datagen.common.config`
 
 Responsibilities include:
+
 - Reading application configuration.
 - Providing format-specific readers for HOCON, JSON, and YAML.
 - Creating readers through `ConfigReaderFactory`.
-- Loading typed configuration through `ConfigLoader[T]` implementations.
+- Loading typed configuration through configuration-loader implementations.
 
 Customer-specific configuration is defined under `customer.config`. Loader implementations reside under `customer.loader`, with `CustomerLoaderFactory` creating the customer configuration loader.
 
-Observed entry-point behavior:
+Generation scenarios are defined under `com.shopsphere.datagen.scenario`. `GenerationScenarioLoader` loads scenario definitions, and `GenerationScenario` represents the settings consumed by the generation pipeline.
 
-1. `Main` selects `ConfigFileFormat.HOCON`.
-2. `ConfigReaderFactory` creates the corresponding reader.
-3. The reader loads application configuration.
-4. `CustomerLoaderFactory` creates a customer configuration loader.
-5. The loader loads customer configuration from the configured customer section.
+The implemented scenario names are:
 
-The format selection in `Main` is currently hardcoded to HOCON.
+- `baseline`
+- `high_demand`
+- `payment_failures`
+
+Scenario selection and default handling are described in Section 3.1.
 
 ### 2.2 Shared generation infrastructure
 
 Package: `com.shopsphere.datagen.common`
 
-Important components:
-- `generator.Generator[T]`: common abstraction exposing `generate(): T`.
+Important components include:
+
+- `generator.Generator[T]`: common generator abstraction.
 - `distribution.RandomGenerator`: seeded random-number generation backed by `java.util.Random`.
 - `distribution.Distribution[T]`: distribution abstraction.
-- `UniformDistribution[T]`, `WeightedDistribution[T]`, and `TriangularDistribution`: distribution implementations.
-- `json.JsonMapper`: shared JSON mapping support.
+- `UniformDistribution[T]`: uniform selection.
+- `WeightedDistribution[T]`: weighted selection. Its accepted weight values and validation behavior are defined by the implementation and tests.
+- `TriangularDistribution`: triangular distribution implementation.
+- `json.JsonMapper`: shared JSON serialization support.
+- `output`: JSON Lines writing and run output publication.
 - `enums`: domain values and configuration-format types.
 
-A fixed random seed supports reproducibility only when random-number consumption and execution order remain consistent. It does not establish deterministic results across different parallel scheduling patterns.
+Distribution implementations allow generators to express selection behavior without embedding all selection logic directly in domain models.
+
+A fixed seed alone does not guarantee identical output across different execution schedules, worker counts, partitioning strategies, or random-number consumption sequences. Reproducibility claims must account for the complete generation execution model.
 
 ### 2.3 Customer generation
 
 Package: `com.shopsphere.datagen.customer`
 
-Important components:
-- `CustomerConfig` and related configuration models describe customer-generation inputs.
-- `CustomerConfigLoader` and supporting loaders load typed customer configuration.
-- `CustomerIdentityGenerator` generates customer identity attributes.
-- `CustomerIdGenerator` generates canonical customer IDs.
-- `CustomerGenerator` generates a `Customer`.
-- `CustomerGraphGenerator` coordinates related entities for a customer.
-- `CustomerGraphValidator` validates graph relationships and generation invariants.
-- `Customer` and `CustomerGraph` represent the customer and its generated graph.
+Important components include:
 
-The customer configuration includes separate concerns such as demographics, lifecycle, status, segmentation, acquisition, and behavior.
+- `CustomerConfig` and related configuration models.
+- `CustomerConfigLoader` and supporting configuration loaders.
+- `CustomerIdentityGenerator`: generates customer identity attributes.
+- `CustomerIdGenerator`: generates canonical customer identifiers.
+- `CustomerGenerator`: generates a `Customer`.
+- `CustomerChunkGenerator`: generates a chunk of customer graphs.
+- `CustomerGraphGenerator`: coordinates related entities for one customer.
+- `CustomerGraphValidator`: validates graph relationships and generation invariants.
+- `Customer` and `CustomerGraph`: represent a customer and its associated generated entities.
+
+Customer configuration includes concerns such as demographics, lifecycle, status, segmentation, acquisition, and behavior.
+
+Chunk-based generation allows the application to process customers in logical batches instead of requiring the entire dataset to be retained as one in-memory collection. It does not, by itself, guarantee a fixed upper bound on total memory usage: completed results may wait for earlier chunks, and each chunk may contain a materialized collection of generated graphs.
 
 ### 2.4 Reference data
 
-Geography components are under `com.shopsphere.datagen.geography`:
+Geography components reside under `com.shopsphere.datagen.geography`:
+
 - `GeographyLoader` loads geography reference data.
 - `GeographyModels` and `GeographyJsonModels` represent geography data.
 - `GeographyReferenceData` provides reference data to consumers.
-- `GeographyValidator` validates geography relationships.
+- `GeographyValidator` validates geographic relationships.
 - `BuildingLocation` supports building-location data.
 
-Product components are under `com.shopsphere.datagen.product`:
+Product components reside under `com.shopsphere.datagen.product`:
+
 - `ProductLoader` loads product data.
 - `Product` and `ProductsData` represent product data.
 - `ProductReferenceData` provides products to generators.
 
-`CustomerGraphGenerator` receives geography and product reference data as constructor dependencies. `Main` loads these resources, validates geography reference data, and passes the data to the graph generator.
+The application loads reference data and passes it to the relevant generation and validation components. Product selection can use uniform or weighted selection according to the selected scenario.
+
+Reference data must be valid before it is used to generate dependent entities.
 
 ### 2.5 Domain generation
 
 | Domain | Main components | Responsibility |
 |---|---|---|
-| Address | `AddressGenerator`, `Address` | Generate addresses associated with a customer using geography reference data |
-| Order | `OrderGenerator`, `Order` | Generate orders associated with a customer |
-| Order item | `OrderItemGenerator`, `OrderItem`, `OrderItemIdGenerator` | Generate order lines associated with an order and selected products |
-| Payment | `PaymentGenerator`, `Payment`, `PaymentIdGenerator` | Generate payment records associated with an order |
-| Payment outcome | `PaymentAttemptOutcomeGenerator` | Select payment-attempt outcomes and their associated payment statuses |
+| Customer | `CustomerGenerator`, `CustomerIdentityGenerator` | Generate customer records and identity attributes |
+| Address | `AddressGenerator`, `Address` | Generate customer addresses using geography reference data |
+| Order | `OrderGenerator`, `Order` | Generate orders associated with customers |
+| Order item | `OrderItemGenerator`, `OrderItem`, `OrderItemIdGenerator` | Generate order lines and select products |
+| Payment | `PaymentGenerator`, `PaymentIdGenerator` | Generate payment records associated with orders |
+| Payment outcome | `PaymentAttemptOutcomeGenerator` | Generate payment-attempt outcomes and associated statuses |
+| Customer graph | `CustomerGraphGenerator`, `CustomerGraphValidator` | Assemble and validate related entities |
 
-## 3. Current application entry-point flow
+The number of addresses, orders, and order items is controlled by generation settings. Payment counts depend on the payment-attempt outcomes produced by the configured payment behavior; they are not necessarily a fixed number per order.
+
+### 2.6 Scenario layer
+
+Package: `com.shopsphere.datagen.scenario`
+
+The scenario layer separates business behavior profiles from the generation pipeline.
+
+Scenario definitions provide settings consumed by the relevant generators, including:
+
+- Orders per customer.
+- Items per order.
+- Product selection strategy.
+- Payment outcome weights.
+
+The implemented scenarios are:
+
+| Scenario | Intended behavior | Configurable behavior |
+|---|---|---|
+| `baseline` | Baseline generation behavior | Order and item counts, product selection, and payment outcome weights |
+| `high_demand` | Higher order activity and larger baskets | Order and item counts and weighted product selection |
+| `payment_failures` | Increased payment failure and retry behavior | Payment outcome weights and associated generation behavior |
+
+The exact values and outcome definitions are specified in scenario configuration. They should not be inferred from the descriptions in this table.
+
+These scenarios implement business-behavior variations. They do not, by themselves, establish that generated datasets reproduce real-world business distributions or satisfy separate requirements for clean, slightly dirty, and dirty data profiles.
+
+## 3. Application entry point and execution flow
 
 Source: `src/main/scala/com/shopsphere/datagen/Main.scala`
 
-The verified `Main.main` path performs these operations:
+The application coordinates configuration loading, scenario selection, reference-data loading, customer generation, chunk execution, and output publication.
 
-1. Logs application startup.
-2. Selects HOCON configuration.
-3. Creates a configuration reader and reads the application configuration.
-4. Loads `CustomerConfig`.
-5. Creates `RandomGenerator` with seed `42L`.
-6. Creates `CustomerIdentityGenerator`.
-7. Creates `CustomerGenerator`.
-8. Generates one customer.
-9. Loads geography reference data and validates its integrity.
-10. Loads product reference data and constructs `ProductReferenceData`.
-11. Creates `CustomerGraphGenerator` with the generated customer, reference data, seeded random generator, ID generators, and `customerConfig.lifecycle.asOfDate`.
-12. Generates two addresses, two orders, and two order items per order.
-13. Validates the generated graph using `CustomerGraphValidator`.
-14. Logs validation success and a concise graph summary.
+The logical execution flow is:
 
-The generated graph is retained in memory. The verified execution path does not persist or export it to a database or file.
+1. Read the application arguments, including the output root and requested scenario.
+2. Resolve the scenario, using the configured default when the scenario argument is omitted or blank.
+3. Load application and customer configuration.
+4. Initialize the generation-run settings and random-generation infrastructure.
+5. Load geography reference data and validate its integrity.
+6. Load product reference data.
+7. Initialize the customer graph-generation components with the required configuration and reference data.
+8. Plan and execute customer generation in chunks.
+9. Apply scenario-specific settings for order counts, basket sizes, product selection, and payment outcomes.
+10. Validate generated customer graphs through the configured graph-generation and validation path.
+11. Stream generated entity records to the five JSONL output files.
+12. Publish the completed run output and report the output location and record counts.
 
-### 3.1 Verified execution result
+The exact division of these responsibilities among `Main`, chunk generation, graph generation, validation, and output components should remain aligned with the source code.
 
-The application completed successfully with random seed `42L`.
+### 3.1 Command-line behavior
 
-Observed summary from the verified run:
+The application accepts two positional command-line arguments:
 
-| Entity or operation | Result |
+1. **Output root** — the first argument; defaults to `data/raw` when omitted.
+2. **Scenario name** — the second argument; when omitted or blank, the application loads the default scenario specified by `scenarios.default` in `conf/hocon/scenario.conf`.
+
+The generation-run settings are currently initialized through `GenerationRunConfig()` in `Main.scala`:
+
+| Setting | Default |
 |---|---:|
-| Customer ID | `CUST000001` |
-| Addresses | 2 |
-| Orders | 2 |
-| Order items | 4 |
-| Payments | 3 |
-| Products loaded | 10 |
-| Geography validation | Passed |
-| Customer graph validation | Passed |
+| Master seed | `42L` |
+| Total customers | `100L` |
+| Chunk size | `25L` |
+| Parallelism | `2` |
+| Maximum in-flight chunks | `4` |
 
-The number of payments depends on the generated payment-attempt outcome rather than a fixed payment-count parameter.
+These run settings are separate from the scenario configuration. Scenario definitions configure business-generation behavior, including order counts, item counts, product selection, and payment outcomes.
 
-### 3.2 Verification commands
+Scenario names and configuration values are resolved through the configuration-loading path. Invalid scenario names and configuration values should be rejected; document the precise failure behavior only where it is confirmed by the implementation and tests.
 
-The following commands completed successfully during Milestone 1 verification:
+### 3.2 Output contract
 
-```powershell
-sbt compile
-sbt "Test / testFull"
-sbt run
-```
+Each published run contains five JSONL files:
 
-The full test run completed with 57 tests across 20 suites and zero failures. The application run logged `Customer graph validation passed` and printed the graph summary.
+| File | Contents |
+|---|---|
+| `customers.jsonl` | Customer records |
+| `addresses.jsonl` | Address records enriched with geographic names |
+| `orders.jsonl` | Order records |
+| `order_items.jsonl` | Order-item records |
+| `payments.jsonl` | Payment records |
 
-These results apply to the working tree tested at that time. The exact Git revision should be recorded separately before attributing the verification to a specific commit.
+The serialization contract includes:
 
-## 4. Customer graph generation flow
+- UTF-8 output.
+- One JSON object per line.
+- snake_case JSON property names.
+- ISO-formatted date strings.
+- JSON numeric representation for `BigDecimal` values.
+- Entity identifiers and explicit relationship fields.
+- Geographic names in exported address records, including building, society, road, area, city, state, and country.
+
+The five-file contract should remain compatible as scenario behavior evolves unless a separate, explicit decision changes it.
+
+## 4. Customer graph generation
 
 Source: `customer/generator/CustomerGraphGenerator.scala`
 
-`CustomerGraphGenerator` receives:
-- A `Customer`.
-- `GeographyReferenceData`.
-- `ProductReferenceData`.
-- A shared `RandomGenerator`.
-- An `OrderItemIdGenerator`.
-- A `PaymentIdGenerator`.
-- An as-of date.
+`CustomerGraphGenerator` coordinates the creation of a customer's related entities. Its dependencies include customer data, geography and product reference data, random-generation infrastructure, identifier generators, and the applicable as-of date.
 
-The graph-generation path in `Main` explicitly supplies `customerConfig.lifecycle.asOfDate`. It does not rely on the secondary constructor that defaults the as-of date to `2026-01-01`.
+The graph-generation process coordinates the creation of:
 
-Its `generate(addressCount, orderCount, orderItemCount)` method follows this sequence:
+1. Customer addresses.
+2. Customer orders.
+3. Order items associated with generated orders.
+4. Payment records associated with generated orders.
+5. A `CustomerGraph` containing the generated entities.
 
-1. Creates one `AddressGenerator` for the customer and generates the requested number of addresses.
-2. Creates one `OrderGenerator` for the customer and generates the requested number of orders.
-3. For each generated order, creates an `OrderItemGenerator`.
-4. Generates the requested number of order items for that order.
-5. Calculates the order total from the generated order-item totals and copies the total into the order.
-6. Uses `PaymentAttemptOutcomeGenerator` to obtain payment statuses for the order.
-7. Creates a `PaymentGenerator` for that order and generates payments for those statuses.
-8. Collects the customer, addresses, orders, order items, and payments into a `CustomerGraph`.
+The number of generated entities depends on the supplied generation settings and scenario behavior. Payment counts depend on payment-attempt outcomes.
 
-The method accepts counts for addresses, orders, and order items per order. The number of payments is determined by the generated payment-attempt outcome rather than by a separate payment-count parameter.
+`CustomerGraphValidator` is responsible for checking graph relationships and generation invariants. Validation guarantees should be described in terms of the actual checks performed by that component and the point at which the application invokes it.
 
-### 4.1 Graph validation
+## 5. Chunk planning and parallel execution
 
-`CustomerGraphValidator` validates the generated graph against geography and product reference data and the configured as-of date.
+### 5.1 Chunk planning
 
-The validation path checks the graph's key invariants, including:
-- Customer identity and lifecycle date constraints.
-- Address relationships and references to known buildings and postal codes.
-- Order relationships and date constraints.
-- Order-item references, product references, quantities, prices, identifiers, and item counts.
-- Consistency between order totals and the sum of order-item totals.
-- Payment references, identifiers, amounts, and date constraints.
-- Duplicate identifiers within relevant entity collections.
+`GenerationChunkPlanner` divides the requested customer ordinal range into deterministic chunks based on the configured total customer count and chunk size.
 
-Validation failures raise exceptions rather than allowing `Main` to log a successful graph-validation result.
+Global customer ordinals provide stable customer identity inputs. Chunk boundaries depend on the total count and configured chunk size.
 
-## 5. Identifier generation and sequence scope
+The configured chunk size is an application setting. ADR-0003 records a separate initial production target of 10,000 customers per chunk; that target is not the same as the current default of 25 customers.
 
-The accepted identifier contract is recorded in `decisions/ADR-0001-identifier-conventions.md`.
+### 5.2 Chunk generation
 
-| Entity | Example | Sequence scope |
-|---|---|---|
-| Customer | `CUST000001` | Caller-supplied ordinal |
-| Order | `ORD000001_CUST000001` | Per customer |
-| Address | `ADDR000001_CUST000001` | Per customer |
-| Order item | `ITEM000001_ORD000001_CUST000001` | Per order |
-| Payment | `PAY000001_ORD000001_CUST000001` | Per order |
+`CustomerChunkGenerator` generates the customer graphs belonging to a chunk. Chunk generation uses the run configuration and scenario settings passed into the pipeline.
 
-The order-item and payment ID generators maintain counters keyed by order ID using concurrent maps and atomic counters. This scopes sequences to their parent order.
+Chunk-local generation state and seed derivation are important to reproducibility. The guarantees depend on the implemented algorithm, configuration, random-number consumption, and tests.
 
-See ADR-0001 for the full identifier rules.
+### 5.3 Bounded parallel execution
 
-## 6. Randomness and deterministic parallel generation
+`ParallelChunkExecutor` executes chunk work using a fixed thread pool and limits the number of submitted chunks that have not yet been consumed.
 
-`Main` currently constructs `RandomGenerator` with seed `42L`. The graph generator passes a random generator to multiple domain generators. A fixed seed does not by itself guarantee identical results under different parallel scheduling patterns.
+The executor consumes results in input order and buffers completed out-of-order results until they can be consumed in that order. On a generation failure, it cancels pending work and propagates the failure to the caller. Resource shutdown behavior is governed by the executor implementation.
 
-[ADR-0003](decisions/ADR-0003-deterministic-parallel-generation.md) records the accepted design for deterministic parallel generation:
+This design bounds in-flight chunk work. It does not imply that every generated graph is processed immediately upon completion or that memory usage is independent of chunk size and workload.
 
-- One independent random stream per logical chunk.
-- An initial chunk size of 10,000 customers.
-- Stable global customer ordinals and deterministic chunk boundaries.
-- Chunk-local mutable random state and generator instances.
-- Bounded parallel execution.
-- Deterministic chunk output ordering.
-- Canonical output equality across worker counts as a test requirement.
+### 5.4 Output consumption
 
-The design is not yet implemented or verified. The seed-derivation algorithm must be specified and tested during implementation. The guarantee is scoped to fixed inputs, chunk size, seed derivation, generator version, and random draw order. Changes to those inputs or rules may change generated values.
+The consuming thread writes the results to the JSONL output writer. Parallel generation and output writing are separate responsibilities.
 
-## 7. Architectural status and boundaries
+Output ordering is determined by the order in which chunk results are consumed and records are written. Any stronger claim about byte-for-byte reproducibility must be supported by the actual implementation and tests.
 
-| Capability | Observed status |
-|---|---|
-| Format-specific configuration readers | Implemented |
-| Customer configuration loading | Implemented |
-| Single-customer generation in `Main` | Wired and verified |
-| Geography reference-data loading and validation | Wired and verified |
-| Product reference-data loading | Wired and verified |
-| Customer graph orchestration | Implemented and unit-tested |
-| Graph generation in `Main` | Wired and verified |
-| Graph validation in `Main` | Wired and verified |
-| End-to-end single-customer graph generation | Verified by `sbt run` |
-| Database or file export from `Main` | Not implemented in the verified execution path |
-| Multi-customer batch generation | Outside Milestone 1 |
-| Deterministic parallel generation | Defined in ADR-0003; implementation and verification pending |
+## 6. Randomness and reproducibility
 
-Milestone 1 verification used `sbt compile`, `sbt "Test / testFull"`, and `sbt run`. The test run completed with 57 tests across 20 suites and zero failures.
+`RandomGenerator` wraps `java.util.Random` initialized with a `Long` seed.
 
-The distinction between implementation, unit testing, application wiring, and end-to-end verification must be maintained when assessing project readiness.
+A fixed seed alone does not guarantee identical output across arbitrary worker counts, chunk sizes, scheduling patterns, or changes to the random-number consumption sequence.
 
-## 8. Related documentation
+Reproducibility depends on factors including:
+
+- Master seed and scenario configuration.
+- Deterministic chunk boundaries.
+- Deterministic seed derivation for each chunk.
+- Random-stream allocation and generator state.
+- Customer ordinal and identifier allocation.
+- Stable reference data.
+- Generation order and random-number consumption.
+- Output ordering and serialization behavior.
+
+ADR-0003 records the accepted design for deterministic parallel generation. Its requirements should not be treated as verified guarantees unless the corresponding implementation and tests establish them.
+
+## 7. JSONL writing and run publication
+
+### 7.1 JSONL stream writer
+
+`JsonLinesStreamWriter` writes entity records incrementally as UTF-8 JSONL.
+
+Its responsibilities include:
+
+- Serializing each entity record as a single JSON line.
+- Opening output files lazily when first written, using `CREATE_NEW` and `WRITE` options.
+- Writing records incrementally rather than retaining the entire output dataset in memory.
+- Maintaining record counts for each output entity type.
+- Propagating serialization and file-writing failures.
+- Managing output writers for the duration of the generation run.
+
+The writer is intended for single-threaded consumption. Parallel chunk generation is handled separately by `ParallelChunkExecutor`; output writing is performed by the consuming thread.
+
+`JsonLinesWriter` is a separate writer implementation. The main generation flow uses `JsonLinesStreamWriter`.
+
+The shared JSON mapper defines the serialization conventions used by exported records.
+
+### 7.2 Run output publisher
+
+`RunOutputPublisher` stages generated output in a temporary directory and publishes the completed run under a run-specific directory named `run_<runId>`.
+
+Its documented behavior includes:
+
+1. Creating a temporary output location.
+2. Executing the writer operation.
+3. Publishing completed output under the final run directory.
+4. Attempting to clean up temporary output if writing fails.
+5. Propagating failures to the caller.
+6. The behavior when the target run directory already exists is implementation-defined and should be verified against the publisher and its tests.
+
+The default output root is `data/raw`; a custom output root can be supplied as the first command-line argument.
+
+The publication mechanism must not be described as providing full filesystem transactionality or guaranteed atomic publication across every filesystem and operating environment unless those properties have been specifically established.
+
+### 7.3 Failure handling
+
+Generation, validation, serialization, and output-publication failures should not be silently converted into successful runs.
+
+The publisher's cleanup behavior and existing-target handling are described in the implementation and testing history. Inaccessible-path behavior and broader command-line validation should remain identified as review items unless subsequently verified.
+
+## 8. Verification and status interpretation
+
+When documenting a capability, distinguish these states:
+
+1. Component exists.
+2. Component has unit-test coverage.
+3. Component is wired into the application.
+4. Application-level behavior has been exercised.
+5. The relevant guarantee has been verified by a test that directly checks it.
+
+A passing test suite does not automatically establish every architectural, statistical, performance, or reproducibility guarantee.
+
+Historical test counts and dates belong in `PROJECT_STATE.md` or the relevant decision record. They should be attributed to a specific commit only when the tested revision is known.
+
+## 9. Related documentation
 
 - [Project state](PROJECT_STATE.md)
 - [Documentation index](README.md)
@@ -247,6 +334,8 @@ The distinction between implementation, unit testing, application wiring, and en
 - [Build-system branch strategy (ADR-0002)](decisions/ADR-0002-build-system-branch-strategy.md)
 - [Deterministic parallel generation (ADR-0003)](decisions/ADR-0003-deterministic-parallel-generation.md)
 
-## 9. Maintenance rule
+## 10. Maintenance rule
 
-Update this document when component responsibilities, constructor dependencies, generation flow, or application wiring change. Verify descriptions against the current source rather than relying on older summaries.
+Update this document when component responsibilities, constructor dependencies, configuration defaults, generation flow, output behavior, or application wiring change.
+
+Verify descriptions against the current source and tests rather than relying on older summaries. Preserve the distinction between intended design, implemented behavior, tested behavior, and verified guarantees.

@@ -1,42 +1,46 @@
 # Project State
 
-Last updated: 2026-10-25
-Status: Milestones 1 and 2 completed. Milestone 3 — Scenario-Based Realistic Generation — is the next planned milestone. The current implementation includes integrated customer graph generation, bounded parallel chunk execution, deterministic chunk seed derivation, JSONL streaming, and run output publication. Verify the current Git revision and test results before making new verification claims.
+**Last updated:** 2026-11-02
+
+## Verification and evidence policy
+
+This document summarizes the known implementation status of ShopSphere E-Commerce Data Generator and the next planned work.
+
+Git state, test results, and implementation claims are point-in-time evidence. Recheck the repository and rerun relevant tests before making new verification claims.
+
+A test result must not be attributed to a commit unless the exact tested revision is known. Historical test records are retained for traceability and must not be interpreted as verification of the current working tree.
+
+Implementation status, structural correctness, statistical realism, performance, and production readiness are separate claims. Each requires its own evidence.
 
 ## 1. Project identity
-- Name: ShopSphere E-Commerce Data Generator
-- Scala: 2.13.18
-- Organization: `com.shopsphere`
-- Application name: `ecom-data-generation`
-- Current development branch: `main` (SBT)
-- Separate build branch: `main-gradle`
 
-## 2. Repository baseline
-The original repository baseline was captured before the documentation and identifier implementation commits. Its historical HEAD was `7e5cb87` (`test for Customer generation`).
+- **Project name:** ShopSphere E-Commerce Data Generator
+- **Application name:** `ecom-data-generation`
+- **Organization:** `com.shopsphere`
+- **Scala version:** 2.13.18
+- **Java version used for development:** OpenJDK 17
+- **Primary development branch:** `main` (SBT)
+- **Separate build migration branch:** `main-gradle`
 
-Current repository state at the latest verification:
-- Branch: `main`.
-- Identifier implementation commit: `bd19e78` (`feat: implement hierarchical entity identifiers`).
-- Documentation commits preceding the implementation:
-  - `0293773` — `docs: establish project knowledge baseline`
-  - `7b11129` — `docs: accept hierarchical identifier contract`
-- The implementation and test changes were committed separately from the initial documentation decisions.
-- The branch was reported clean after the implementation commit and was three commits ahead of `origin/main` at that point. Recheck Git status before future work; this document update may add another local commit.
-- Local Java version: OpenJDK 17.0.16 (Microsoft build).
-- SBT version reported by the project: 2.0.9; SBT runner: 1.13.0.
-- `build.sbt` declares Scala 2.13.18 and project dependencies.
-- The `main-gradle` branch is the separate Gradle migration branch. Recheck its current state before making branch-parity claims.
+The purpose of the project is to generate configurable, relationally consistent e-commerce datasets suitable for data engineering development, experimentation, and downstream processing.
 
-These are point-in-time observations, not guarantees about later repository state.
+## 2. Repository and build model
 
-## 3. Build and branch model
-- `main` contains the SBT build.
-- `main-gradle` contains the Gradle migration.
-- A previous branch comparison found no differences under `src/` or `conf/` between the branch tips inspected.
-- Gradle-specific changes should not be merged blindly into `main`.
-- Recheck branch tips and source/test parity before making future alignment claims.
+### Branch model
 
-Build configuration observed on `main`:
+- `main` is the primary SBT development branch.
+- `main-gradle` is the separate Gradle build migration branch.
+- Do not assume that the two branches are identical.
+- Verify source, configuration, tests, and build behavior independently before making branch-parity claims.
+
+Git commit IDs and ahead/behind counts are intentionally not maintained here because they change with every commit. Use `git status -sb` and `git log -5 --oneline --decorate` for the current repository snapshot.
+
+### Build model
+
+The primary development build uses SBT with Scala 2.13.18 and Java 17.
+
+The SBT build has previously used the following dependencies:
+
 - Typesafe Config 1.4.3
 - Jackson Scala module 2.20.0
 - Jackson YAML 2.20.0
@@ -44,40 +48,100 @@ Build configuration observed on `main`:
 - Log4j API/Core 2.26.1
 - ScalaTest 3.2.19
 
-## 4. Architecture inventory
-The implementation includes these areas:
+Recheck the current build files before treating this as a complete or current dependency inventory.
+
+The Gradle migration is maintained separately. Successful builds or tests on one branch do not establish equivalent behavior on the other branch.
+
+## 3. Architecture inventory
+
+The implementation includes the following areas:
 
 - `common.config`: configuration loaders and HOCON, JSON, and YAML readers.
-- `common.distribution`: distribution abstractions, uniform/weighted/triangular distributions, and seeded random generation.
-- `customer`: customer models, configuration, identity/ID generation, and graph generation.
-- `geography`: reference data models, loading, and validation.
-- `address`: address model and generator.
-- `product`: product models, loading, and reference data.
-- `order`: order model and generator.
-- `orderitem`: order-item model, ID generation, and generator.
-- `payment`: payment model, ID generation, generator, and payment-attempt outcome generation.
-- `Main.scala`: application entry point.
-- `common.json`: shared Jackson JSON mapper with snake_case field naming and ISO date serialization.
-- `common.output`: JSON Lines writer and run output publisher, including record counts and cleanup of temporary output after failures.
-- Address export: enriched address records containing building, society, road, area, city, state, and country information.
+- `common.distribution`: distribution abstractions, uniform and weighted distributions, triangular distributions, and seeded random generation.
+- `common.json`: shared Jackson JSON serialization configuration, including snake_case property naming and ISO date serialization.
+- `common.output`: JSON Lines writing and run output publication.
+- `common.parallel`: chunk planning and bounded parallel execution.
+- `customer`: customer models, configuration, identifier generation, and customer graph generation.
+- `geography`: geographic reference data, loading, and validation.
+- `address`: address models and generation.
+- `product`: product models, reference data, and product selection.
+- `order`: order models and generation.
+- `orderitem`: order-item models, identifier generation, and generation.
+- `payment`: payment models, identifier generation, and payment-attempt outcome generation.
+- `scenario`: generation scenario definitions and configuration loading.
+- `Main.scala`: application entry point and generation pipeline.
 
-Relevant data resources include geography reference JSON, product reference JSON, and configuration examples in `conf/hocon`, `conf/json`, and `conf/yaml`.
+The project also contains reference data and configuration resources under `conf`, including scenario configuration under `conf/hocon`.
 
-## Current Milestone Summary
+This inventory is a high-level index, not a guarantee that every class, configuration file, or resource is listed.
+
+For detailed entity structures and relationships, see [Data Model](DATA_MODEL.md).
+
+## 4. Current delivery status
 
 ### Milestone 1: Integrated Customer Graph Generation
 
 **Status: Completed**
 
-Connected customer generation, reference-data loading, graph generation, and graph validation into the application flow.
+Customer generation, reference-data loading, customer graph generation, and graph validation were connected through the application entry point.
+
+The milestone established the initial integrated customer graph, including:
+
+- Customer generation.
+- Address generation.
+- Order generation.
+- Order-item generation.
+- Payment-attempt generation.
+- Reference-data resolution.
+- Customer graph validation.
+
+The original milestone focused on generating and validating a customer graph in memory. Its historical verification is recorded in Section 8.
 
 ### Milestone 2: Parallel Generation and JSONL Streaming
 
-**Status: Completed**
+**Status: Implemented**
 
-Implemented chunk-based generation, deterministic chunk seed derivation, bounded parallel execution, JSONL streaming, and run output publication.
+The generation pipeline was extended with:
 
-The output contract retains five files:
+- Chunk-based customer generation.
+- Deterministic chunk seed derivation.
+- Bounded parallel execution.
+- Ordered consumption of chunk results.
+- Lazy chunk planning and input consumption.
+- JSON Lines streaming.
+- Run output publication.
+
+#### Chunk planning
+
+`GenerationChunkPlanner` produces contiguous customer-ordinal ranges.
+
+The planner:
+
+- Starts customer ordinals at 1.
+- Produces chunks up to the configured chunk size.
+- Uses an iterator rather than allocating all chunk descriptors in advance.
+- Handles a final partial chunk when the total customer count is not divisible by the chunk size.
+
+#### Parallel execution
+
+`ParallelChunkExecutor` uses a fixed-size thread pool and an `ExecutorCompletionService`.
+
+Its implementation provides:
+
+- A configured worker parallelism.
+- A maximum number of submitted-but-not-yet-consumed tasks controlled by `maxInFlight`.
+- Lazy consumption of the input iterator.
+- Concurrent execution of generation tasks.
+- Buffering of completed results until earlier inputs are ready.
+- Consumption of results in their original input order.
+- Cancellation of pending tasks when a failure occurs.
+- Executor shutdown and termination handling.
+
+The distinction between concurrent execution and ordered consumption is important: tasks may finish in a different order from submission, but the consumer receives their results in input order.
+
+#### JSONL output contract
+
+The output contract contains five entity files:
 
 - `customers.jsonl`
 - `addresses.jsonl`
@@ -85,121 +149,182 @@ The output contract retains five files:
 - `order_items.jsonl`
 - `payments.jsonl`
 
-The implementation is intended to preserve reproducibility for a fixed seed and generation configuration. Exact reproducibility guarantees should be stated only to the extent verified by the tests.
+Address output is enriched with geographic names, including:
 
-### Milestone 3: Scenario-Based Realistic Generation
+- Building
+- Society
+- Road
+- Area
+- City
+- State
+- Country
 
-**Status: Planned — not yet implemented**
+The application resolves the relevant geographic building data when producing the address export representation.
 
-**Objective:** Introduce explicit scenario selection so generated data exhibits different, configurable business behaviors while retaining valid entity relationships and the existing generation pipeline.
+#### Reproducibility qualification
 
-Initial scenarios proposed for evaluation:
+Reproducibility depends on more than a master seed. Relevant factors include:
 
-- `baseline`: Preserve current behavior as closely as possible.
-- `high_demand`: Increase order activity and basket sizes, with configurable product-demand distributions.
-- `payment_failures`: Increase payment retry and permanent-failure rates through configurable payment outcome weights.
+- Generation configuration and selected scenario.
+- Deterministic chunk partitioning.
+- Chunk seed derivation.
+- Random-stream allocation to chunks and generators.
+- Execution and output ordering.
+- Stable reference data.
+- Random-number consumption sequence.
+- Identifier allocation and generator lifecycle.
 
-These scenarios are proposals, not implemented capabilities. Their final definitions and parameters must be established during implementation.
+A fixed seed alone does not guarantee identical output under every parallel execution configuration.
 
-**Acceptance criteria**
+Implementation of chunked execution and output publication should not be interpreted as proof of every reproducibility or large-scale performance requirement.
 
-1. Scenario selection is explicit and validated.
-2. The baseline scenario preserves existing behavior as closely as practical.
-3. Alternative scenarios produce measurable differences in their intended business metrics.
-4. Generation remains reproducible for the same seed, scenario, and configuration under the documented execution guarantees.
-5. Entity relationships, identifiers, lifecycle constraints, and graph validation remain correct.
-6. Bounded parallel execution and JSONL streaming continue to work.
-7. The five existing JSONL output files and run publication behavior remain compatible.
-8. Automated tests cover scenario configuration, scenario-specific behavior, invalid configurations, and regression behavior.
+### Milestone 3: Scenario-Based Business Generation
 
-### Milestone 4: Data Quality and Realism Validation
+**Status: Implemented**
 
-**Status: Planned**
+The generator supports three configurable business scenarios, loaded from `conf/hocon/scenario.conf`.
 
-Define and test business-level invariants, distribution checks, and data-quality measures appropriate to the generated scenarios.
+| Scenario | Orders per Customer | Items per Order | Product Selection |
+|---|---:|---:|---|
+| `baseline` | 2 | 2 | Uniform |
+| `high_demand` | 4 | 4 | Weighted |
+| `payment_failures` | 2 | 2 | Uniform |
 
-### Milestone 5: Scale, Performance, and Production Readiness
+#### Payment outcome configuration
 
-**Status: Planned**
+Payment outcome weights are configurable independently for each scenario.
 
-Evaluate larger workloads, resource usage, performance, failure handling, and operational readiness.
+The four outcomes are:
 
-Milestone completion and verification claims must be tied to the implementation and test results actually observed.
+1. Success on first attempt.
+2. Success after one retry.
+3. Success after two retries.
+4. Permanent failure.
 
-## 5. Canonical entity identifier contract
-Decision: `docs/decisions/ADR-0001-identifier-conventions.md` — Accepted.
+The baseline and high-demand scenarios use these weights, in the order above:
 
-The implementation uses the following formats:
+- `0.70`
+- `0.20`
+- `0.07`
+- `0.03`
+
+The payment-failures scenario uses:
+
+- `0.45`
+- `0.25`
+- `0.15`
+- `0.15`
+
+The configured weights in all three supplied profiles sum to 1.0.
+
+The configuration model checks that weights are finite and non-negative and that at least one weight is positive. The model does not itself enforce that the weights sum to 1.0.
+
+#### Product selection
+
+- `baseline` uses uniform product selection.
+- `high_demand` uses weighted product selection across configured product reference data.
+- `payment_failures` uses uniform product selection.
+
+The high-demand configuration defines explicit selection weights for ten products, PROD_001 through PROD_010. The scenario loader validates these product IDs against the loaded product reference data.
+
+The scenario loader validates that weighted product selection references known products and that at least one configured product weight is positive.
+
+#### Integration
+
+Scenario configuration is integrated into:
+
+- Customer graph generation.
+- Order and order-item cardinality.
+- Order-item product selection.
+- Payment-attempt outcome generation.
+
+**Scope clarification:** These are business-generation scenarios. They vary order volume, basket size, product selection, and payment outcome weights.
+
+They do not yet provide comprehensive data-quality profiles, statistically realistic customer or market behavior, dirty-data generation, or configurable scenario composition. Those remain future roadmap items.
+
+## 5. Generation configuration and defaults
+
+The application uses a generation run configuration to control the overall generation workload and execution behavior.
+
+The previously inspected defaults are:
+
+| Setting | Default |
+|---|---:|
+| Master seed | `42L` |
+| Total customers | `100L` |
+| Chunk size | `25L` |
+| Parallelism | `2` |
+| Maximum in-flight tasks | `4` |
+
+The configuration enforces the following constraints:
+
+- Master seed must be non-negative.
+- Total customers must be non-negative.
+- Chunk size must be positive.
+- Parallelism must be positive.
+- Maximum in-flight tasks must be greater than or equal to parallelism.
+
+Recheck the current configuration implementation before treating these values as an exhaustive description of all supported options.
+
+## 6. Latest reported verification
+
+The latest supplied test output for the tested working tree reported:
+
+| Measure | Result |
+|---|---:|
+| Tests run | 100 |
+| Suites completed | 29 |
+| Tests succeeded | 100 |
+| Tests failed | 0 |
+| Suites aborted | 0 |
+
+The exact Git revision tested was not included in that output.
+
+This establishes that the tested working tree passed the reported test run. It must not be attributed to a particular commit or assumed to represent the current working tree without further verification.
+
+Run the complete test suite after subsequent source or configuration changes before making a new verification claim.
+
+## 7. Canonical entity identifier contract
+
+Decision record: [ADR-0001: Entity Identifier Conventions](decisions/ADR-0001-identifier-conventions.md) — Accepted.
+
+The canonical identifier formats are:
 
 | Entity | Format | Sequence scope |
 |---|---|---|
-| Customer | `CUST000001` | Caller-supplied global ordinal |
+| Customer | `CUST000001` | Caller-supplied ordinal |
 | Order | `ORD000001_CUST000001` | Per customer |
 | Address | `ADDR000001_CUST000001` | Per customer |
 | Order item | `ITEM000001_ORD000001_CUST000001` | Per order |
 | Payment | `PAY000001_ORD000001_CUST000001` | Per order |
 
-Rules:
-- Do not put an underscore between an entity prefix and its zero-padded six-digit sequence.
-- Use underscores to separate hierarchical ID components.
+### Identifier rules
+
+- Do not put an underscore between an entity prefix and its six-digit, zero-padded sequence.
+- Use underscores to separate hierarchical identifier components.
 - Child identifiers embed their relevant parent identifier.
-- Explicit relationship fields, such as `customerId` and `orderId`, remain required; embedded IDs do not replace these fields.
-- Order and address counters reset for each customer through generator-instance scope.
-- Order-item and payment counters are keyed by order ID, allowing each order's sequence to start at one.
-- Order-item and payment ID generators use concurrent maps and atomic counters to support concurrent calls without sharing a single global sequence across all parents.
+- Explicit relationship fields, such as customer and order identifiers, remain required.
+- Order and address sequences are scoped to the customer generator instance.
+- Order-item and payment sequences are keyed by order ID.
+- Concurrent identifier generation must preserve required uniqueness and parent-scoped sequence behavior.
 
-The source and test scan performed after implementation found no remaining matches for the searched legacy patterns `CUST_`, `ORD_CUST_`, `ADDR_`, `ITEM_`, or `PAY_` under `src/main/scala` and `src/test/scala`. This scan does not establish that no legacy identifiers exist in external datasets, generated files, or other directories.
+An earlier source and test scan found no remaining matches for the searched legacy patterns `CUST_`, `ORD_CUST_`, `ADDR_`, `ITEM_`, and `PAY_` under `src/main/scala` and `src/test/scala`.
 
-## 6. Integration status distinction
+This was a point-in-time scan, not a guarantee about external datasets, generated files, or future changes.
 
-The project contains customer generation, reference-data loading, customer graph generation, and graph validation components.
+## 8. Historical verification records
 
-Milestone 1 has now connected these components through `Main.scala`. The application generates one customer graph, validates its relationships and generation invariants, and logs a concise summary.
+The records in this section preserve earlier verification evidence. Test counts refer to the specific working trees tested at the time and are not cumulative counts.
 
-Distinguish these states in future reviews:
-1. Component exists.
-2. Component has unit-test coverage.
-3. Component is wired into `Main`.
-4. End-to-end execution has been verified.
+### Milestone 1 verification — 2026-10-22
 
-The current Milestone 1 verification establishes all four states for the single-customer graph-generation path. It does not establish persistence, export, multi-customer batch execution, or parallel execution.
+Reported commands:
 
-## 7. Milestone 1: Single-Customer Graph Integration
+- `sbt compile` — passed.
+- `sbt "Test / testFull"` — 57 tests passed across 20 suites, with zero failures.
+- `sbt run` — completed successfully.
 
-**Status: Completed and verified on 2026-10-22**
-
-### Scope delivered
-
-`Main.scala` now generates one complete `CustomerGraph` sequentially using:
-
-- Random seed: `42L`
-- Customers: 1
-- Addresses per customer: 2
-- Orders per customer: 2
-- Order items per order: 2
-- As-of date: `customerConfig.lifecycle.asOfDate`
-
-The application loads customer configuration, generates the customer, loads and validates geography reference data, loads product reference data, generates the graph, validates the graph, and logs a concise summary. The graph remains in memory.
-
-### Execution flow
-
-1. Load customer configuration.
-2. Initialize the seeded random generator and generate one customer.
-3. Load and validate geography reference data.
-4. Load product reference data.
-5. Generate the customer graph using the configured lifecycle as-of date.
-6. Validate graph relationships and generation invariants.
-7. Log validation success and graph summary counts.
-
-### Verification record
-
-Commands executed successfully:
-
-- `sbt compile` — compilation passed.
-- `sbt "Test / testFull"` — 57 tests passed across 20 suites; 0 failures.
-- `sbt run` — application completed successfully.
-
-Observed application output:
+Observed application output included:
 
 | Entity or operation | Result |
 |---|---:|
@@ -212,205 +337,171 @@ Observed application output:
 | Geography validation | Passed |
 | Customer graph validation | Passed |
 
-The payment count is determined by payment-attempt outcomes and is not a fixed generation parameter.
+The payment count was determined by payment-attempt outcomes, not by a fixed payment-count parameter.
 
-These results verify the tested working tree at the time of execution. Record the exact Git revision separately before making commit-specific verification claims.
+The supplied command output did not establish the exact Git revision tested.
 
-### Explicit exclusions
+### Identifier implementation verification
 
-- Parallel or chunk-based execution.
-- Database storage, file persistence, or export.
-- Multi-customer batch generation.
-- Unrelated refactoring.
+An earlier verification record reported:
 
-## 8. Reproducibility
-`RandomGenerator` wraps `java.util.Random` initialized with a `Long` seed. The inspected entry point used seed `42L`.
-
-A fixed seed can support reproducible sequential execution when random-number consumption and execution order remain unchanged. It does not, by itself, guarantee identical output across parallel worker counts or scheduling patterns.
-
-Any parallel-generation design must explicitly define deterministic partitioning, random stream allocation, ordering, and output guarantees before implementation.
-
-## 9. Current known gaps and review items
-
-- Define and test behavior when a configured `asOfDate` precedes a customer's registration date or another relevant lifecycle boundary.
-- Establish explicit requirements for deterministic parallel generation before implementing concurrency. ADR-0003 defines the design contract; implementation and verification remain pending.
-- Expand payment-ID tests if the model later supports multiple payments per order.
-- Verify the Gradle migration branch separately; successful SBT verification on `main` does not verify `main-gradle`.
-- Record future build and test results against the exact commit tested.
-- Persistence, file export, and multi-customer batch generation remain outside Milestone 1.
-
-## 10. Historical and current verification records
-Verification performed on `main` after the identifier implementation changes:
-- Command: `sbt test`
-- Result: **14 tests succeeded, 0 failed**, across 7 suites.
+- `sbt test`
+- 14 tests succeeded across 7 suites, with zero failures.
 - Scala test compilation completed successfully using Scala 2.13.18.
 - `git diff --check` reported no whitespace errors.
-- A source/test search for the listed legacy ID patterns returned no matches.
-- SBT printed Windows symbolic-link creation warnings recommending Developer Mode; these warnings did not prevent the test suite from passing.
+- The source/test scan for the listed legacy identifier patterns returned no matches.
 
-The test result applies to the implementation working tree that was subsequently committed as `bd19e78`. Rerun the relevant commands after later source changes before claiming the new checkout passes verification.
+These results applied to the working tree subsequently committed as `bd19e78` (`feat: implement hierarchical entity identifiers`).
 
-### Milestone 1 verification — 2026-10-22
+### Sequential JSONL output verification — 2026-10-24
 
-- `sbt compile`: passed.
-- `sbt "Test / testFull"`: 57 tests passed across 20 suites; 0 failures.
-- `sbt run`: passed.
-- The application logged `Customer graph validation passed`.
-- Observed graph counts: 1 customer, 2 addresses, 2 orders, 4 order items, and 3 payments.
-- Product reference data loaded: 10 products.
-- Windows symbolic-link warnings were present; they did not prevent successful execution.
+An earlier verification record reported:
 
-The Git revision was not included in the supplied command output. Do not attribute these results to a particular commit until the revision is checked.
+- `sbt compile` — passed.
+- `sbt "Test / testFull"` — 71 tests passed across 25 suites, with zero failures.
+- `sbt run` — completed successfully.
+- `sbt "run data/exports"` — completed successfully with a custom output root.
+- All five expected JSONL files were present.
+- JSONL records were parsed successfully.
+- Address output included building, society, road, area, city, state, and country names.
+- Integration tests covered generation, validation, serialization, publication, record counts, and enriched address fields.
+- Failure-path tests covered serialization failures, temporary-output cleanup, and invalid output-root behavior.
 
-### Phase 2 verification — 2026-10-24
+The recorded revision was `7ea61dcecf3a03c8082f3129c9ffff5d0eb34e39` (`Harden lifecycle validation and output publishing`).
 
-- `sbt compile`: passed after the address export changes.
-- `sbt "Test / testFull"`: 67 tests passed across 24 suites; 0 failures.
-- `sbt run`: completed successfully.
-- `sbt "run data/exports"`: completed successfully with a custom output root.
-- Generated output contained five JSONL files: customers, addresses, orders, order items, and payments.
-- Inspected address records included building, society, road, area, city, state, and country fields.
-- An integration-style test verified the five output files, JSON object validity, record counts, and address enrichment.
-- Windows symbolic-link warnings were present but did not prevent successful execution.
-- Exact Git revision: not recorded in the supplied verification output.
+### Parallel generation and scenario implementation
 
-## 11. Immediate Next Steps
+The implementation subsequently expanded to include:
 
-1. Review and finalize the project-state documentation update before committing it.
-2. Inspect existing distribution abstractions, configuration-loading conventions, payment outcome models, and related tests before finalizing the scenario design.
-3. Define the scenario configuration model and establish the baseline behavior.
-4. Implement scenario-specific business behavior incrementally, beginning with configurable payment outcome distributions.
-5. Add tests for scenario selection, deterministic generation, business behavior differences, and regression compatibility.
-6. Run the complete SBT test suite and record the exact Git revision and results.
-7. Review and update architecture documentation to match the implemented design.
+- Chunk-based generation.
+- Bounded parallel execution.
+- Deterministic chunk seed derivation.
+- Ordered result consumption.
+- JSONL output publication.
+- Configurable business scenarios.
 
-Separate concerns such as downstream data engineering labs remain outside the scope of this project.
+The reported 100-test result across 29 suites belongs to the tested working tree for this later implementation. The exact Git revision was not included in the supplied test output.
 
-## 12. Phase 2: End-to-End Generation and Writing
+Re-run the complete suite after subsequent source or configuration changes before treating that result as verification of a later revision.
 
-**Status: Core sequential JSONL export implemented and verified on 2026-10-24. Additional application-level integration and failure-path coverage remain pending.**
+## 9. Reproducibility and validation principles
 
-### 12.1 Objective
+`RandomGenerator` wraps `java.util.Random` initialized with a `Long` seed.
 
-Extend the verified Milestone 1 single-customer graph-generation path into a sequential pipeline that validates generated data, serializes the graph into JSON Lines files, publishes completed run output, and reports record counts and output location.
+Reproducibility depends on more than a seed. Relevant factors include:
 
-The implementation preserves the existing entity identifier contract, customer configuration loading, seeded random generation, reference-data validation, graph generation, and graph validation.
+- Generation configuration and selected scenario.
+- Deterministic chunk partitioning.
+- Random-stream allocation to chunks and generators.
+- Execution and output ordering.
+- Stable reference data.
+- The random-number consumption sequence.
+- Identifier allocation and generator lifecycle.
 
-### 12.2 Implemented execution flow
+The project should state reproducibility guarantees precisely and only to the extent verified by automated tests.
 
-1. Load customer configuration using the existing configuration reader.
-2. Initialize the seeded random generator.
-3. Generate one customer and load geography and product reference data.
-4. Validate geography reference data and generate the customer graph.
-5. Validate graph relationships and generation invariants.
-6. Enrich address export records with geographic names resolved from the geography reference data.
-7. Serialize records using the shared Jackson JSON mapper.
-8. Write five JSON Lines files into a temporary run directory.
-9. Publish the completed run directory under the configured output root.
-10. Log the published output location and record counts.
+### Structural validation versus statistical validation
 
-### 12.3 Output contract
+Graph validation and statistical realism are different responsibilities.
 
-The output format is JSON Lines (JSONL), with one JSON object per line.
+- **Structural validation** checks entity relationships, identifiers, required fields, and generation invariants.
+- **Statistical validation** checks whether generated distributions, correlations, frequencies, and business metrics behave as intended.
 
-Each run contains these files:
+Passing structural validation does not, by itself, establish statistical realism.
 
-| File | Contents |
-|---|---|
-| `customers.jsonl` | Customer records |
-| `addresses.jsonl` | Address records enriched with geographic names |
-| `orders.jsonl` | Order records |
-| `order_items.jsonl` | Order-item records |
-| `payments.jsonl` | Payment records |
+## 10. Current known gaps and review items
 
-Serialization conventions:
+The following items require review or explicit verification before being considered complete:
 
-- JSON property names use `snake_case`.
-- Date fields are serialized as ISO date strings.
-- `BigDecimal` values are represented as JSON numbers.
-- Entity identifiers and explicit relationship fields are preserved.
-- Address exports include building, society, road, area, city, state, and country names in addition to the address identifiers and postal information.
+- Define statistical expectations and acceptance thresholds for scenario-specific distributions.
+- Evaluate whether order counts, basket sizes, product popularity, customer behavior, and payment outcomes are sufficiently realistic.
+- Identify important correlations among customers, products, orders, payments, and time.
+- Review lifecycle boundary behavior, including cases where an `asOfDate` precedes registration or another relevant lifecycle boundary.
+- Review behavior for inaccessible output paths and invalid command-line arguments.
+- Expand payment identifier tests if the model supports multiple payments per order in new ways.
+- Recheck the current implementation of deterministic parallel generation and its tests against ADR-0003.
+- Verify the `main-gradle` branch independently.
+- Record exact Git revisions and test results for future verification.
+- Evaluate large workloads, resource usage, and generation performance before making production-readiness claims.
 
-### 12.4 Output configuration and publication
+## 11. Roadmap alignment and next steps
 
-The default output root is `data/raw`.
+The project roadmap distinguishes the following later milestones.
 
-The application also accepts a custom output root as its first command-line argument. For example:
+### M4 — Realistic Dataset
 
-- `sbt run` uses `data/raw`.
-- `sbt "run data/exports"` uses `data/exports`.
+**Status: Planned**
 
-Each run is published under a run-specific directory named `run_<runId>`.
+Planned scope:
 
-The `JsonLinesWriter` creates parent directories when necessary, writes UTF-8 JSONL records, returns the record count, and refuses to overwrite an existing file.
+- Configurable distributions.
+- Configurable cardinality.
+- Long-tail behavior.
+- Important correlations.
+- Statistical validation and measurable acceptance thresholds.
 
-The `RunOutputPublisher` stages output in a temporary directory and moves the completed directory to its final run-specific location after the writer callback succeeds. If writing fails, it attempts to clean up the temporary directory and propagates the failure. It also refuses to overwrite an existing run directory.
+### M5 — Scenario Dataset
 
-These guarantees are based on the current implementation and tests. The publisher should not be described as providing a filesystem transaction or a guaranteed atomic move unless those guarantees are explicitly implemented and verified.
+**Status: Planned**
 
-### 12.5 Automated tests and verification
+Planned scope:
 
-The following verification was completed on `main` on 2026-10-24:
+- Clean, slightly dirty, and dirty data profiles.
+- Skew scenarios.
+- Scenario composition.
+- Scenario behavior and data-quality validation.
 
-- `sbt compile`: passed.
-- `sbt "Test / testFull"`: **71 tests passed across 25 suites; 0 failures**.
-- `sbt run`: completed successfully.
-- `sbt "run data/exports"`: completed successfully and published output to a custom directory.
-- JSONL output inspection confirmed that all five expected files were present in a generated run directory.
-- Address output inspection confirmed that records contained building, society, road, area, city, state, and country fields.
-- JSON syntax inspection confirmed that generated JSONL records could be parsed successfully.
-- Windows symbolic-link warnings occurred during SBT execution but did not prevent successful verification.
+The implemented business scenarios (`baseline`, `high_demand`, and `payment_failures`) should not be assumed to fulfill every acceptance criterion of M5. They provide scenario-based business-generation behavior, but scenario composition, data-quality profiles, and dirty-data generation must be assessed separately.
 
-Automated test coverage includes:
+### M6 — Production-Quality Generator
 
-- JSON serialization, snake_case property names, ISO date serialization, and numeric `BigDecimal` output.
-- JSONL record writing, record counts, empty collections, and overwrite protection.
-- Successful run publication, cleanup following simulated write failures, and protection against existing run directories.
-- Serialization-failure handling and cleanup of temporary output.
-- Invalid output-root handling when the specified root is a file.
-- Application-level integration testing through `Main`, covering generation, validation, serialization, publication, all five JSONL files, record counts, and enriched address fields.
-- Lifecycle configuration validation that rejects negative `registration_history_days`.
+**Status: Planned**
 
-The verified Git revision is `7ea61dcecf3a03c8082f3129c9ffff5d0eb34e39` (`Harden lifecycle validation and output publishing`).
+Planned scope:
 
-The publisher's tested behavior should not be interpreted as a guarantee of filesystem transactionality or atomic publication in every environment. Inaccessible-path behavior and broader command-line argument validation remain review items.
+- A documented deterministic-output contract.
+- A run manifest.
+- Comprehensive validation.
+- Observability and diagnosable failures.
+- Reliable large-dataset generation.
 
-### 12.6 Acceptance criteria and remaining work
+### M7 — Spark Performance Laboratory Ready
 
-The core sequential JSONL export path and its integration and failure-path coverage are implemented and verified.
+**Status: Planned**
 
-Completed acceptance criteria:
+Planned scope:
 
-1. Generate and validate a complete customer graph.
-2. Serialize the graph into the five expected JSONL files.
-3. Publish completed output under a run-specific directory.
-4. Verify JSON structure, record counts, and enriched geographic address fields.
-5. Test the application-level generation-to-publication flow.
-6. Test serialization-failure cleanup and invalid output-root behavior.
-7. Reject negative registration history configuration values.
-8. Run the complete SBT test suite successfully and record the verified Git revision.
+- Configurable physical file layout.
+- Reproducible file-size and skew scenarios.
+- Documented dataset characteristics.
+- Benchmark metadata.
+- An understanding of generation performance.
 
-Remaining work:
+### Immediate next steps
 
-1. Review behavior for inaccessible output paths and invalid command-line arguments.
-2. Continue architecture documentation and review.
-3. Revisit lifecycle boundary behavior beyond negative registration history validation.
-4. Implement deterministic parallel generation in accordance with ADR-0003 only after its prerequisites and scope are addressed.
-5. Verify the `main-gradle` branch independently.
-6. Record exact Git revisions and test results for future verification.
+1. Finish reconciling the architecture, data model, project state, and ADRs against the current source, configuration, and tests.
+2. Correct stale statements about milestone status, application wiring, writer class names, command-line behavior, and verification results.
+3. Define measurable M4 acceptance criteria for distributions, cardinality, long-tail behavior, important correlations, and statistical validation.
+4. Establish baseline metrics and statistical expectations before implementing realism changes.
+5. Implement and test M4 incrementally, preserving scenario behavior, structural validation, the documented reproducibility contract, and JSONL output compatibility.
+6. Run the complete SBT test suite after the final source or configuration changes, and record the exact Git revision alongside the results.
+7. Verify the Gradle branch separately if branch parity or Gradle verification is required.
 
-### 12.7 Explicit boundaries
+Documentation changes should remain separate from unrelated application refactoring. Before committing, review the complete diff, run `git diff --check`, validate Markdown links, and confirm `git status -sb`.
 
-The initial Phase 2 implementation remains sequential and single-customer.
+Do not attribute test results to a commit unless the tested revision is known.
 
-The following capabilities are not included in the verified Phase 2 scope:
+## 12. Scope boundaries
 
-- Multi-customer batch generation.
-- Parallel or chunk-based generation.
+The project is a data generator intended to produce configurable, relationally consistent e-commerce datasets.
+
+The following should be treated as separate capabilities requiring their own scope and verification:
+
 - Database persistence.
-- Performance optimization and large-scale benchmarking.
-- Additional output formats beyond JSONL.
+- Additional output formats beyond the established JSONL contract.
+- Statistical realism beyond the distributions and relationships currently implemented.
+- Dirty-data profiles and explicit data-quality scenarios.
+- Production-scale performance claims.
+- Downstream Spark benchmarking and data engineering laboratory setup.
 
-Parallel generation must follow ADR-0003, including deterministic chunk planning, seed derivation, bounded execution, and reproducible output ordering.
-
-Milestone 1 remains completed and verified as recorded in Section 7. Phase 2 extends that baseline without retroactively changing Milestone 1's scope or verification claims.
+The presence of a model, configuration option, or component does not alone establish that its behavior is fully integrated, tested, statistically realistic, or production-ready. Record those states separately and verify each claim against the current implementation.
