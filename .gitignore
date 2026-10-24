@@ -5,6 +5,7 @@ target/
 .gradle/*
 .gradle
 
+.gradle
 ### IntelliJ IDEA ###
 .idea
 .idea/modules.xml
