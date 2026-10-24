@@ -3,6 +3,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+.gradle
 ### IntelliJ IDEA ###
 .idea
 .idea/modules.xml
