@@ -84,6 +84,24 @@ class CustomerConfigLoaderTest extends AnyFunSuite {
     )
   }
 
+  test("registration history days must be non-negative") {
+    val config =
+      ConfigReaderFactory
+        .createConfigReader(ConfigFileFormat.HOCON)
+        .readConfigFile
+        .getConfig(DataGenerationConstants.CUSTOMER)
+        .withValue(
+          s"${DataGenerationConstants.LIFECYCLE}.${DataGenerationConstants.REGISTRATION_HISTORY_DAYS}",
+          com.typesafe.config.ConfigValueFactory.fromAnyRef(-1)
+        )
+
+    intercept[IllegalArgumentException] {
+      CustomerLoaderFactory
+        .createCustomerConfigLoader()
+        .loadConfiguration(config)
+    }
+  }
+
   private def assertApproximatelyOne(value: Double): Unit = {
     assert(math.abs(value - 1.0) < 0.000001)
   }

@@ -10,9 +10,20 @@ class CustomerLifecycleLoader
   extends ConfigLoader[CustomerLifecycleConfig] {
 
   override def loadConfiguration(config: Config): CustomerLifecycleConfig = {
+    val asOfDate =
+      LocalDate.parse(config.getString(DataGenerationConstants.AS_OF_DATE))
+
+    val registrationHistoryDays =
+      config.getInt(DataGenerationConstants.REGISTRATION_HISTORY_DAYS)
+
+    require(
+      registrationHistoryDays >= 0,
+      s"${DataGenerationConstants.REGISTRATION_HISTORY_DAYS} must be non-negative"
+    )
+
     CustomerLifecycleConfig(
-      asOfDate = LocalDate.parse(config.getString(DataGenerationConstants.AS_OF_DATE)),
-      registrationHistoryDays = config.getInt(DataGenerationConstants.REGISTRATION_HISTORY_DAYS)
+      asOfDate = asOfDate,
+      registrationHistoryDays = registrationHistoryDays
     )
   }
 }
