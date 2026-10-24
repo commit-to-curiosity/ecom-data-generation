@@ -113,7 +113,6 @@ class CustomerGenerator(
 
   def generate(ordinal: Long): Customer = {
     val customerId = CustomerIdGenerator.generate(ordinal)
-
     val firstName = identityGenerator.generateFirstName()
     val lastName = identityGenerator.generateLastName()
     val email = identityGenerator.generateEmail(firstName, lastName)

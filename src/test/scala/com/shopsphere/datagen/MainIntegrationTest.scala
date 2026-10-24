@@ -60,10 +60,42 @@ class MainIntegrationTest extends AnyFunSuite {
       val orderItems = readRecords("order_items.jsonl")
       val payments = readRecords("payments.jsonl")
 
-      assert(customers.size == 1)
-      assert(addresses.size == 2)
-      assert(orders.size == 2)
-      assert(orderItems.size == 4)
+      assert(customers.size == 100)
+      assert(customers.map(_.get("id").asText()).distinct.size == 100)
+      assert(customers.head.get("id").asText() == "CUST000001")
+      assert(customers.last.get("id").asText() == "CUST000100")
+      assert(addresses.size == 200)
+      assert(orders.size == 200)
+      assert(orderItems.size == 400)
+      val customerIds =
+        customers.map(_.get("id").asText()).toSet
+
+      val orderIds =
+        orders.map(_.get("id").asText()).toSet
+
+      assert(orderIds.size == orders.size, "Order IDs must be unique")
+
+      orderItems.foreach { item =>
+        assert(
+          orderIds.contains(item.get("order_id").asText()),
+          s"Order item references unknown order: ${item.get("order_id").asText()}"
+        )
+      }
+
+      payments.foreach { payment =>
+        assert(
+          orderIds.contains(payment.get("order_id").asText()),
+          s"Payment references unknown order: ${payment.get("order_id").asText()}"
+        )
+      }
+
+      addresses.foreach { address =>
+        assert(customerIds.contains(address.get("customer_id").asText()))
+      }
+
+      orders.foreach { order =>
+        assert(customerIds.contains(order.get("customer_id").asText()))
+      }
 
       addresses.foreach { address =>
         assert(address.hasNonNull("building_name"))
