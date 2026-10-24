@@ -1,12 +1,18 @@
 
 package com.shopsphere.datagen.customer.validation
 
-import com.shopsphere.datagen.common.distribution.RandomGenerator
-import com.shopsphere.datagen.customer.generator.{
-  CustomerGraphGenerator,
-  CustomerIdentityGenerator,
-  CustomerGenerator
+import com.shopsphere.datagen.common.config.{
+  ConfigReaderFactory,
+  DataGenerationConstants
 }
+import com.shopsphere.datagen.common.distribution.RandomGenerator
+import com.shopsphere.datagen.common.enums.ConfigFileFormat
+import com.shopsphere.datagen.customer.generator.{
+  CustomerGenerator,
+  CustomerGraphGenerator,
+  CustomerIdentityGenerator
+}
+import com.shopsphere.datagen.customer.loader.CustomerLoaderFactory
 import com.shopsphere.datagen.customer.model.CustomerGraph
 import com.shopsphere.datagen.geography.loader.GeographyLoader
 import com.shopsphere.datagen.geography.reference.GeographyReferenceData
@@ -15,9 +21,7 @@ import com.shopsphere.datagen.order.generator.OrderItemIdGenerator
 import com.shopsphere.datagen.payment.generator.PaymentIdGenerator
 import com.shopsphere.datagen.product.loader.ProductLoader
 import com.shopsphere.datagen.product.reference.ProductReferenceData
-import com.shopsphere.datagen.common.config.{ConfigReaderFactory, DataGenerationConstants}
-import com.shopsphere.datagen.common.enums.ConfigFileFormat
-import com.shopsphere.datagen.customer.loader.CustomerLoaderFactory
+import com.shopsphere.datagen.scenario.GenerationScenarioLoader
 import org.scalatest.funsuite.AnyFunSuite
 
 import java.time.LocalDate
@@ -34,6 +38,9 @@ class CustomerGraphValidatorTest extends AnyFunSuite {
   private val productReferenceData =
     new ProductReferenceData(new ProductLoader().load())
 
+  private val scenario =
+    new GenerationScenarioLoader(productReferenceData).loadDefault()
+
   private val customerConfig = {
     val config =
       ConfigReaderFactory
@@ -42,7 +49,9 @@ class CustomerGraphValidatorTest extends AnyFunSuite {
 
     CustomerLoaderFactory
       .createCustomerConfigLoader()
-      .loadConfiguration(config.getConfig(DataGenerationConstants.CUSTOMER))
+      .loadConfiguration(
+        config.getConfig(DataGenerationConstants.CUSTOMER)
+      )
   }
 
   private val graph: CustomerGraph = {
@@ -50,6 +59,7 @@ class CustomerGraphValidatorTest extends AnyFunSuite {
 
     val random = new RandomGenerator(seed)
     val identityGenerator = new CustomerIdentityGenerator(random)
+
     val customer = new CustomerGenerator(
       customerConfig,
       random,
@@ -63,7 +73,8 @@ class CustomerGraphValidatorTest extends AnyFunSuite {
       random,
       new OrderItemIdGenerator(),
       new PaymentIdGenerator(),
-      asOfDate
+      asOfDate,
+      scenario
     ).generate(
       addressCount = 2,
       orderCount = 2,
@@ -87,7 +98,9 @@ class CustomerGraphValidatorTest extends AnyFunSuite {
       graph.addresses.head.copy(customerId = "CUST999999")
 
     val invalidGraph =
-      graph.copy(addresses = graph.addresses.updated(0, invalidAddress))
+      graph.copy(
+        addresses = graph.addresses.updated(0, invalidAddress)
+      )
 
     assertThrows[IllegalArgumentException] {
       validator.validate(invalidGraph, expectedItemsPerOrder)
@@ -148,7 +161,8 @@ class CustomerGraphValidatorTest extends AnyFunSuite {
 
   test("should reject an inconsistent order-item total") {
     val item = graph.orderItems.head
-    val invalidItem = item.copy(totalPrice = item.totalPrice + BigDecimal(1))
+    val invalidItem =
+      item.copy(totalPrice = item.totalPrice + BigDecimal(1))
 
     val invalidGraph =
       graph.copy(

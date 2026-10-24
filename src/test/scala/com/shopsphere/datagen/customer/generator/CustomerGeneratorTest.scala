@@ -1,8 +1,15 @@
+
 package com.shopsphere.datagen.customer.generator
 
-import com.shopsphere.datagen.common.config.{ConfigReaderFactory, DataGenerationConstants}
+import com.shopsphere.datagen.common.config.{
+  ConfigReaderFactory,
+  DataGenerationConstants
+}
 import com.shopsphere.datagen.common.distribution.RandomGenerator
-import com.shopsphere.datagen.common.enums.{ConfigFileFormat, CustomerAcquisitionChannel}
+import com.shopsphere.datagen.common.enums.{
+  ConfigFileFormat,
+  CustomerAcquisitionChannel
+}
 import com.shopsphere.datagen.customer.config.CustomerConfig
 import com.shopsphere.datagen.customer.loader.CustomerLoaderFactory
 import org.scalatest.funsuite.AnyFunSuite
@@ -14,6 +21,7 @@ class CustomerGeneratorTest extends AnyFunSuite {
   test("should generate a valid customer") {
     val customerConfig = loadCustomerConfig()
     val randomGenerator = new RandomGenerator(42L)
+
     val generator =
       new CustomerGenerator(
         customerConfig,
@@ -28,7 +36,13 @@ class CustomerGeneratorTest extends AnyFunSuite {
     assert(customer.lastName.nonEmpty)
     assert(customer.email.nonEmpty)
     assert(customer.phone.nonEmpty)
-    assert(!customer.registrationDate.isAfter(customerConfig.lifecycle.asOfDate))
+
+    assert(
+      !customer.registrationDate.isAfter(
+        customerConfig.lifecycle.asOfDate
+      )
+    )
+
     assert(
       !customer.registrationDate.isBefore(
         customerConfig.lifecycle.asOfDate.minusDays(
@@ -45,7 +59,11 @@ class CustomerGeneratorTest extends AnyFunSuite {
 
     assert(age >= 18)
     assert(age <= 80)
-    assertCampaignMatchesChannel(customer.acquisitionChannel, customer.acquisitionCampaign)
+
+    assertCampaignMatchesChannel(
+      customer.acquisitionChannel,
+      customer.acquisitionCampaign
+    )
   }
 
   test("should generate deterministic customers for the same seed") {
@@ -53,6 +71,7 @@ class CustomerGeneratorTest extends AnyFunSuite {
 
     def generateCustomers(seed: Long) = {
       val randomGenerator = new RandomGenerator(seed)
+
       val generator =
         new CustomerGenerator(
           customerConfig,
@@ -71,6 +90,7 @@ class CustomerGeneratorTest extends AnyFunSuite {
 
     def generateCustomer(seed: Long) = {
       val randomGenerator = new RandomGenerator(seed)
+
       new CustomerGenerator(
         customerConfig,
         randomGenerator,
@@ -100,16 +120,24 @@ class CustomerGeneratorTest extends AnyFunSuite {
     acquisitionChannel match {
       case channel if channel == CustomerAcquisitionChannel.ORGANIC.name =>
         assert(Set("seo", "content").contains(acquisitionCampaign))
+
       case channel if channel == CustomerAcquisitionChannel.PAID_SEARCH.name =>
         assert(Set("brand", "generic").contains(acquisitionCampaign))
+
       case channel if channel == CustomerAcquisitionChannel.SOCIAL.name =>
-        assert(Set("instagram", "facebook", "youtube").contains(acquisitionCampaign))
+        assert(
+          Set("instagram", "facebook", "youtube").contains(acquisitionCampaign)
+        )
+
       case channel if channel == CustomerAcquisitionChannel.EMAIL.name =>
         assert(Set("newsletter", "promotion").contains(acquisitionCampaign))
+
       case channel if channel == CustomerAcquisitionChannel.DIRECT.name =>
         assert(acquisitionCampaign == "none")
+
       case channel if channel == CustomerAcquisitionChannel.REFERRAL.name =>
         assert(acquisitionCampaign == "customer_referral")
+
       case other =>
         fail(s"Unexpected acquisition channel: $other")
     }
@@ -119,11 +147,12 @@ class CustomerGeneratorTest extends AnyFunSuite {
     val customerConfig = loadCustomerConfig()
     val randomGenerator = new RandomGenerator(42L)
 
-    val generator = new CustomerGenerator(
-      customerConfig,
-      randomGenerator,
-      new CustomerIdentityGenerator(randomGenerator)
-    )
+    val generator =
+      new CustomerGenerator(
+        customerConfig,
+        randomGenerator,
+        new CustomerIdentityGenerator(randomGenerator)
+      )
 
     assert(generator.generate(10001L).id == "CUST010001")
   }
@@ -133,6 +162,7 @@ class CustomerGeneratorTest extends AnyFunSuite {
 
     def createGenerator(seed: Long) = {
       val randomGenerator = new RandomGenerator(seed)
+
       new CustomerGenerator(
         customerConfig,
         randomGenerator,
@@ -154,11 +184,12 @@ class CustomerGeneratorTest extends AnyFunSuite {
     val customerConfig = loadCustomerConfig()
     val randomGenerator = new RandomGenerator(42L)
 
-    val generator = new CustomerGenerator(
-      customerConfig,
-      randomGenerator,
-      new CustomerIdentityGenerator(randomGenerator)
-    )
+    val generator =
+      new CustomerGenerator(
+        customerConfig,
+        randomGenerator,
+        new CustomerIdentityGenerator(randomGenerator)
+      )
 
     assertThrows[IllegalArgumentException] {
       generator.generate(0L)

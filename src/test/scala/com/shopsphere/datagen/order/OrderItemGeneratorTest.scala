@@ -6,10 +6,64 @@ import com.shopsphere.datagen.product.loader.ProductLoader
 import com.shopsphere.datagen.product.reference.ProductReferenceData
 import com.shopsphere.datagen.customer.model.Customer
 import org.scalatest.funsuite.AnyFunSuite
+import com.shopsphere.datagen.scenario.{
+  ProductSelectionConfig,
+  ProductSelectionStrategy
+}
 
 import java.time.LocalDate
 
 class OrderItemGeneratorTest extends AnyFunSuite {
+
+  test("should select only products with positive configured weights") {
+    val randomGenerator = new RandomGenerator(42L)
+
+    val customer =
+      Customer(
+        id = "CUST000001",
+        firstName = "John",
+        lastName = "Doe",
+        email = "john.doe@example.com",
+        phone = "9999999999",
+        gender = "male",
+        dateOfBirth = LocalDate.of(1990, 5, 10),
+        registrationDate = LocalDate.of(2023, 6, 15),
+        customerStatus = "active",
+        customerSegment = "standard",
+        acquisitionChannel = "organic",
+        acquisitionCampaign = "seo",
+        preferredDevice = "mobile",
+        preferredPaymentMethod = "upi"
+      )
+
+    val order =
+      new OrderGenerator(customer, randomGenerator).generate()
+
+    val productReferenceData =
+      new ProductReferenceData(new ProductLoader().load())
+
+    val selectedProduct =
+      productReferenceData.products.head
+
+    val productSelection =
+      ProductSelectionConfig(
+        strategy = ProductSelectionStrategy.Weighted,
+        weights = Map(selectedProduct.id -> 1.0)
+      )
+
+    val generator =
+      new OrderItemGenerator(
+        order,
+        productReferenceData,
+        randomGenerator,
+        new OrderItemIdGenerator(),
+        productSelection
+      )
+
+    val generatedItems = (1 to 20).map(_ => generator.generate())
+
+    assert(generatedItems.forall(_.productId == selectedProduct.id))
+  }
 
   test("should generate a valid order item for an order and product") {
     val customer =
@@ -44,12 +98,19 @@ class OrderItemGeneratorTest extends AnyFunSuite {
     val productReferenceData =
       new ProductReferenceData(products)
 
+    val productSelection =
+      ProductSelectionConfig(
+        strategy = ProductSelectionStrategy.Uniform,
+        weights = Map.empty
+      )
+
     val orderItem =
       new OrderItemGenerator(
         order,
         productReferenceData,
         randomGenerator,
-        new OrderItemIdGenerator()
+        new OrderItemIdGenerator(),
+        productSelection
       ).generate()
 
     val product =
