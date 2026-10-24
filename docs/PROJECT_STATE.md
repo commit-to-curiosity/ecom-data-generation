@@ -1,7 +1,7 @@
 # Project State
 
 Last updated: 2026-10-24
-Status: Milestone 1 completed and verified. Phase 2 sequential JSONL export is implemented and verified; further integration hardening and architecture work remain.
+Status: Milestone 1 and Phase 2 sequential JSONL export completed and verified. Application-level integration, failure-path coverage, and lifecycle history validation are implemented and tested.
 
 ## 1. Project identity
 - Name: ShopSphere E-Commerce Data Generator
@@ -213,16 +213,12 @@ The Git revision was not included in the supplied command output. Do not attribu
 
 ## 11. Immediate next steps
 
-1. Review the current Git state and record the exact revision containing the verified Phase 2 implementation.
-2. Add a full application-level integration test covering generation, validation, serialization, and publication.
-3. Expand failure-path testing to cover serialization errors and filesystem failures, including confirmation that failed runs are not published.
-4. Review output configuration and validation, including behavior for invalid command-line paths.
-5. Revisit the known `asOfDate` lifecycle-boundary behavior.
-6. Continue architecture documentation and review.
-7. Implement deterministic parallel generation in accordance with ADR-0003 when its prerequisites and scope are addressed.
-8. Recheck the `main-gradle` branch separately; successful SBT verification on `main` does not verify the Gradle branch.
-
-Do not treat a planned capability as implemented until source inspection, automated tests, and end-to-end verification support that claim.
+1. Review output configuration and inaccessible output paths, including invalid command-line arguments.
+2. Continue architecture documentation and review.
+3. Revisit lifecycle boundary behavior beyond negative registration history validation.
+4. Implement deterministic parallel generation in accordance with ADR-0003 when its prerequisites and scope are addressed.
+5. Verify the `main-gradle` branch independently.
+6. Record exact Git revisions and test results for future verification.
 
 ## 12. Phase 2: End-to-End Generation and Writing
 
@@ -288,36 +284,54 @@ These guarantees are based on the current implementation and tests. The publishe
 
 ### 12.5 Automated tests and verification
 
-The following verification was reported for the working tree on `main` on 2026-10-24:
+The following verification was completed on `main` on 2026-10-24:
 
-- `sbt compile`: passed after the address export changes.
-- `sbt "Test / testFull"`: 67 tests passed across 24 suites; 0 failures.
+- `sbt compile`: passed.
+- `sbt "Test / testFull"`: **71 tests passed across 25 suites; 0 failures**.
 - `sbt run`: completed successfully.
 - `sbt "run data/exports"`: completed successfully and published output to a custom directory.
-- JSONL output inspection: all five expected files were present in a generated run directory.
-- Address output inspection: two records contained the expected geographic fields.
-- JSON syntax inspection: the generated JSONL records were successfully parsed using PowerShell `ConvertFrom-Json`.
+- JSONL output inspection confirmed that all five expected files were present in a generated run directory.
+- Address output inspection confirmed that records contained building, society, road, area, city, state, and country fields.
+- JSON syntax inspection confirmed that generated JSONL records could be parsed successfully.
+- Windows symbolic-link warnings occurred during SBT execution but did not prevent successful verification.
 
 Automated test coverage includes:
 
-- JSON serialization, snake_case naming, ISO date serialization, and numeric `BigDecimal` output.
+- JSON serialization, snake_case property names, ISO date serialization, and numeric `BigDecimal` output.
 - JSONL record writing, record counts, empty collections, and overwrite protection.
-- Successful run publication, cleanup after a simulated write failure, and existing-run protection.
-- Integration-style testing of all five JSONL files, record counts, JSON object validity, and enriched address fields.
+- Successful run publication, cleanup following simulated write failures, and protection against existing run directories.
+- Serialization-failure handling and cleanup of temporary output.
+- Invalid output-root handling when the specified root is a file.
+- Application-level integration testing through `Main`, covering generation, validation, serialization, publication, all five JSONL files, record counts, and enriched address fields.
+- Lifecycle configuration validation that rejects negative `registration_history_days`.
 
-The application itself has been run successfully, but a dedicated automated test invoking the complete `Main` execution path has not yet been established.
+The verified Git revision is `7ea61dcecf3a03c8082f3129c9ffff5d0eb34e39` (`Harden lifecycle validation and output publishing`).
 
-The reported test and execution results apply to the working tree at the time of verification. Record the exact Git revision before making commit-specific verification claims.
+The publisher's tested behavior should not be interpreted as a guarantee of filesystem transactionality or atomic publication in every environment. Inaccessible-path behavior and broader command-line argument validation remain review items.
 
 ### 12.6 Acceptance criteria and remaining work
 
-The core sequential export path is implemented and verified. Remaining work includes:
+The core sequential JSONL export path and its integration and failure-path coverage are implemented and verified.
 
-1. Add automated application-level integration coverage for the complete generation-to-publication flow.
-2. Expand failure-path tests for serialization and filesystem errors.
-3. Verify invalid and inaccessible output paths and document their expected behavior.
-4. Ensure documentation reflects the exact implementation and its verified limitations.
-5. Rerun the full SBT verification suite after subsequent source changes and record the tested Git revision.
+Completed acceptance criteria:
+
+1. Generate and validate a complete customer graph.
+2. Serialize the graph into the five expected JSONL files.
+3. Publish completed output under a run-specific directory.
+4. Verify JSON structure, record counts, and enriched geographic address fields.
+5. Test the application-level generation-to-publication flow.
+6. Test serialization-failure cleanup and invalid output-root behavior.
+7. Reject negative registration history configuration values.
+8. Run the complete SBT test suite successfully and record the verified Git revision.
+
+Remaining work:
+
+1. Review behavior for inaccessible output paths and invalid command-line arguments.
+2. Continue architecture documentation and review.
+3. Revisit lifecycle boundary behavior beyond negative registration history validation.
+4. Implement deterministic parallel generation in accordance with ADR-0003 only after its prerequisites and scope are addressed.
+5. Verify the `main-gradle` branch independently.
+6. Record exact Git revisions and test results for future verification.
 
 ### 12.7 Explicit boundaries
 
