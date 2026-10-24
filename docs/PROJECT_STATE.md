@@ -1,7 +1,7 @@
 # Project State
 
-Last updated: 2026-10-24
-Status: Milestone 1 and Phase 2 sequential JSONL export completed and verified. Application-level integration, failure-path coverage, and lifecycle history validation are implemented and tested.
+Last updated: 2026-10-25
+Status: Milestones 1 and 2 completed. Milestone 3 — Scenario-Based Realistic Generation — is the next planned milestone. The current implementation includes integrated customer graph generation, bounded parallel chunk execution, deterministic chunk seed derivation, JSONL streaming, and run output publication. Verify the current Git revision and test results before making new verification claims.
 
 ## 1. Project identity
 - Name: ShopSphere E-Commerce Data Generator
@@ -62,6 +62,69 @@ The implementation includes these areas:
 - Address export: enriched address records containing building, society, road, area, city, state, and country information.
 
 Relevant data resources include geography reference JSON, product reference JSON, and configuration examples in `conf/hocon`, `conf/json`, and `conf/yaml`.
+
+## Current Milestone Summary
+
+### Milestone 1: Integrated Customer Graph Generation
+
+**Status: Completed**
+
+Connected customer generation, reference-data loading, graph generation, and graph validation into the application flow.
+
+### Milestone 2: Parallel Generation and JSONL Streaming
+
+**Status: Completed**
+
+Implemented chunk-based generation, deterministic chunk seed derivation, bounded parallel execution, JSONL streaming, and run output publication.
+
+The output contract retains five files:
+
+- `customers.jsonl`
+- `addresses.jsonl`
+- `orders.jsonl`
+- `order_items.jsonl`
+- `payments.jsonl`
+
+The implementation is intended to preserve reproducibility for a fixed seed and generation configuration. Exact reproducibility guarantees should be stated only to the extent verified by the tests.
+
+### Milestone 3: Scenario-Based Realistic Generation
+
+**Status: Planned — not yet implemented**
+
+**Objective:** Introduce explicit scenario selection so generated data exhibits different, configurable business behaviors while retaining valid entity relationships and the existing generation pipeline.
+
+Initial scenarios proposed for evaluation:
+
+- `baseline`: Preserve current behavior as closely as possible.
+- `high_demand`: Increase order activity and basket sizes, with configurable product-demand distributions.
+- `payment_failures`: Increase payment retry and permanent-failure rates through configurable payment outcome weights.
+
+These scenarios are proposals, not implemented capabilities. Their final definitions and parameters must be established during implementation.
+
+**Acceptance criteria**
+
+1. Scenario selection is explicit and validated.
+2. The baseline scenario preserves existing behavior as closely as practical.
+3. Alternative scenarios produce measurable differences in their intended business metrics.
+4. Generation remains reproducible for the same seed, scenario, and configuration under the documented execution guarantees.
+5. Entity relationships, identifiers, lifecycle constraints, and graph validation remain correct.
+6. Bounded parallel execution and JSONL streaming continue to work.
+7. The five existing JSONL output files and run publication behavior remain compatible.
+8. Automated tests cover scenario configuration, scenario-specific behavior, invalid configurations, and regression behavior.
+
+### Milestone 4: Data Quality and Realism Validation
+
+**Status: Planned**
+
+Define and test business-level invariants, distribution checks, and data-quality measures appropriate to the generated scenarios.
+
+### Milestone 5: Scale, Performance, and Production Readiness
+
+**Status: Planned**
+
+Evaluate larger workloads, resource usage, performance, failure handling, and operational readiness.
+
+Milestone completion and verification claims must be tied to the implementation and test results actually observed.
 
 ## 5. Canonical entity identifier contract
 Decision: `docs/decisions/ADR-0001-identifier-conventions.md` — Accepted.
@@ -211,14 +274,17 @@ The Git revision was not included in the supplied command output. Do not attribu
 - Windows symbolic-link warnings were present but did not prevent successful execution.
 - Exact Git revision: not recorded in the supplied verification output.
 
-## 11. Immediate next steps
+## 11. Immediate Next Steps
 
-1. Review output configuration and inaccessible output paths, including invalid command-line arguments.
-2. Continue architecture documentation and review.
-3. Revisit lifecycle boundary behavior beyond negative registration history validation.
-4. Implement deterministic parallel generation in accordance with ADR-0003 when its prerequisites and scope are addressed.
-5. Verify the `main-gradle` branch independently.
-6. Record exact Git revisions and test results for future verification.
+1. Review and finalize the project-state documentation update before committing it.
+2. Inspect existing distribution abstractions, configuration-loading conventions, payment outcome models, and related tests before finalizing the scenario design.
+3. Define the scenario configuration model and establish the baseline behavior.
+4. Implement scenario-specific business behavior incrementally, beginning with configurable payment outcome distributions.
+5. Add tests for scenario selection, deterministic generation, business behavior differences, and regression compatibility.
+6. Run the complete SBT test suite and record the exact Git revision and results.
+7. Review and update architecture documentation to match the implemented design.
+
+Separate concerns such as downstream data engineering labs remain outside the scope of this project.
 
 ## 12. Phase 2: End-to-End Generation and Writing
 
