@@ -198,9 +198,80 @@ The Git revision was not included in the supplied command output. Do not attribu
 
 ## 11. Immediate next steps
 
-1. Review and commit the Milestone 1 source, tests, and documentation changes.
-2. Push the local `main` commits when ready.
-3. Document the current data model, generation flow, and configuration contracts.
-4. Verify and document the Gradle migration branch separately.
-5. Revisit the `asOfDate` boundary behavior.
-6. Implement persistence, export, multi-customer generation, or parallel execution only as separately scoped future milestones.
+1. Review the current Git state and confirm the exact revision containing the completed Milestone 1 implementation.
+2. Document and agree on the Phase 2 output contract before implementing persistence.
+3. Implement the sequential end-to-end generation and writing pipeline.
+4. Add automated tests for serialization, output structure, validation failures, and writing failures.
+5. Run the full SBT verification suite and record the exact Git revision tested.
+6. Update project state and architecture documentation to reflect the verified implementation.
+7. Commit the documentation and implementation changes in appropriately scoped commits.
+8. Revisit the known `asOfDate` lifecycle-boundary behavior.
+9. Implement deterministic parallel generation in accordance with ADR-0003 when its prerequisites and scope are addressed.
+
+Do not treat a planned capability as implemented until source inspection, automated tests, and end-to-end verification support that claim.
+
+## 12. Phase 2: End-to-End Generation and Writing
+
+**Status: Planned**
+
+### 12.1 Objective
+
+Extend the verified Milestone 1 single-customer graph-generation path into an end-to-end pipeline that persists validated generated data to the filesystem and reports the outcome of the run.
+
+The initial implementation will remain sequential. It will preserve the existing entity identifier contract, seeded random-generation behavior, configuration loading, reference-data validation, graph generation, and graph validation.
+
+### 12.2 Planned execution flow
+
+1. Load application and customer configuration.
+2. Initialize the seeded random generator.
+3. Load and validate geography reference data.
+4. Load product reference data.
+5. Generate the customer and associated entity graph.
+6. Validate the generated graph.
+7. Serialize the validated data using the agreed output format.
+8. Write output files to the configured output directory.
+9. Report output locations, entity counts, and execution status.
+
+### 12.3 Planned deliverables
+
+- **Output contract:** Define the serialization format, file organization, naming conventions, and treatment of existing output files.
+- **Dedicated writer:** Separate filesystem operations and serialization from domain generators and `Main`.
+- **Pipeline integration:** Connect generation, validation, writing, and execution reporting.
+- **Output configuration:** Use a configurable output directory rather than scattering hardcoded filesystem paths throughout the implementation.
+- **Failure handling:** Make generation, validation, serialization, and filesystem failures visible. A failed run must not be reported as successful.
+- **Automated tests:** Cover successful writes, serialized content, output structure, relevant failure paths, and integration behavior.
+- **Verification:** Run the full SBT test suite and the application end to end, then record the exact Git revision and observed results.
+
+The specific output format and atomicity guarantees must be decided before implementation. Writing should not be described as transactional or atomic unless that behavior is implemented and tested.
+
+### 12.4 Acceptance criteria
+
+Phase 2 is complete when:
+
+1. The application generates the expected graph for its configured inputs.
+2. Graph validation succeeds before the validated graph is written.
+3. The agreed output files are created in the configured directory.
+4. Serialized records preserve the required entity fields, identifiers, and relationships.
+5. The execution summary reports meaningful record counts and output locations.
+6. Invalid data and output failures are handled without falsely reporting success.
+7. Automated tests verify both successful and unsuccessful execution paths.
+8. The full SBT verification suite and end-to-end execution pass.
+9. The architecture and project-state documents accurately describe the implementation and its verified limitations.
+
+### 12.5 Explicit boundaries
+
+The initial Phase 2 implementation will prioritize the existing sequential, single-customer graph path.
+
+The following capabilities are not automatically included in this milestone:
+
+- Multi-customer batch generation.
+- Parallel or chunk-based generation.
+- Database persistence.
+- Performance optimization and large-scale benchmarking.
+- Additional output formats beyond the agreed initial format.
+
+Parallel generation must follow ADR-0003, including deterministic chunk planning, seed derivation, bounded execution, and reproducible output ordering. The writer design should remain compatible with future chunked output without prematurely implementing parallel execution.
+
+### 12.6 Relationship to Milestone 1
+
+Milestone 1 remains completed and verified as recorded in Section 7. Phase 2 extends that baseline; it does not retroactively change the scope or verification claims of Milestone 1.

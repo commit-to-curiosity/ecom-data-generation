@@ -6,7 +6,7 @@
 3. Follow the repository instructions in [`AGENTS.md`](../AGENTS.md).
 
 ## Documents
-- `PROJECT_STATE.md` — verified project snapshot, architecture, implementation status, gaps, and next steps.
+- `PROJECT_STATE.md` — verified project snapshot, completed milestones, planned Phase 2 deliverables, acceptance criteria, gaps, and next steps.
 - `decisions/README.md` — how decisions are proposed, accepted, reviewed, and superseded.
 - `decisions/ADR-0001-identifier-conventions.md` — accepted entity identifier contract.
 - `decisions/ADR-0002-build-system-branch-strategy.md` — SBT and Gradle branch responsibilities.
