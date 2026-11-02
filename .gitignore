@@ -53,3 +53,8 @@ build/
 # Generated ShopSphere data
 /data/raw/
 /data/exports/
+
+# SBT configuration and build output
+/project/build.properties
+/project/target/
+/project/project/
