@@ -58,3 +58,5 @@ build/
 /project/build.properties
 /project/target/
 /project/project/
+
+/data/
