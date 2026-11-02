@@ -49,3 +49,7 @@ build/
 
 ### Scala ###
 .bsp/
+
+# Generated ShopSphere data
+/data/raw/
+/data/exports/
