@@ -40,11 +40,14 @@ object Main {
 
   private val DefaultOutputRoot: Path = Paths.get("data", "raw")
 
-  def main(args: Array[String]): Unit = {
-    val outputRoot =
-      args.headOption.map(Paths.get(_)).getOrElse(DefaultOutputRoot)
+  def main(args: Array[String]): Unit =
+    run(args, GenerationRunConfig())
 
-    val runConfig = GenerationRunConfig()
+  private[datagen] def run(
+                            args: Array[String],
+                            runConfig: GenerationRunConfig
+                          ): Unit = {
+    val outputRoot = args.headOption.map(Paths.get(_)).getOrElse(DefaultOutputRoot)
 
     logger.info("ShopSphere E-Commerce Data Generator started")
     logger.info(s"Master seed: ${runConfig.masterSeed}")

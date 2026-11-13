@@ -204,6 +204,56 @@ The test was run against baseline revision `62bf6fae2c923b331ed12314497757b7ff4c
 
 This verifies worker-count independence for the tested configuration. It does not establish exhaustive reproducibility across all possible inputs, chunk sizes, scenarios, or workloads.
 
+### Production-path reproducibility verification — 2026-11-13
+
+**Status: Verified for the tested configuration.**
+
+`MainIntegrationTest` verifies cross-worker-count reproducibility through the production application path.
+
+The test invokes the application using an injected `GenerationRunConfig`. The normal `Main.main(args)` entry point continues to use the default configuration.
+
+Two production-path runs were compared while changing only worker parallelism:
+
+| Parameter | Run A | Run B |
+|---|---:|---:|
+| Master seed | 42 | 42 |
+| Total customers | 53 | 53 |
+| Chunk size | 10 | 10 |
+| Parallelism | 1 | 4 |
+| Max in-flight | 8 | 8 |
+
+All five generated JSONL files were compared byte-for-byte:
+
+- `customers.jsonl`
+- `addresses.jsonl`
+- `orders.jsonl`
+- `order_items.jsonl`
+- `payments.jsonl`
+
+All comparisons passed.
+
+Additional production-path integration coverage includes:
+
+- Default application execution.
+- Zero-customer generation and empty output files.
+- Generation of 53 customers across six chunks, including a final partial chunk of three customers.
+- Cross-worker-count byte-for-byte output equality.
+
+Verification:
+
+- `MainIntegrationTest`: 4 tests passed.
+- Full SBT test suite: 104 tests passed across 30 suites, zero failures.
+- Full-suite command: `sbt "Test / testOnly *"`
+
+**Git verification context:**
+
+- Base commit: `ccc7ef9777972845c087f7212c42fc57039e1a04`
+- Working tree contained modifications to `Main.scala` and `MainIntegrationTest.scala`.
+- The 104-test result applies to this modified working tree, not to the base commit in isolation.
+- No clean commit containing these modifications was tested.
+
+This verifies production-path worker-count independence for the tested configuration. It does not establish exhaustive reproducibility across all possible inputs, scenarios, chunk sizes, or workloads.
+
 ## Related documentation
 
 - [Identifier conventions (ADR-0001)](ADR-0001-identifier-conventions.md)

@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-11-02
+**Last updated:** 2026-11-14
 
 ## Verification and evidence policy
 
@@ -180,6 +180,19 @@ Implementation of chunked execution and output publication should not be interpr
 
 Cross-worker reproducibility has now been verified for a specific controlled configuration using `ParallelGenerationReproducibilityTest`.
 
+Production-path reproducibility has also been verified through `MainIntegrationTest`.
+
+The integration test invokes the application through `Main.run(args, runConfig)`, using an injected `GenerationRunConfig`. The normal `Main.main(args)` entry point continues to use the default configuration.
+
+The production-path test compares all five JSONL output files byte-for-byte while holding the master seed, customer count, chunk size, and maximum in-flight count constant and changing parallelism from 1 to 4.
+
+The integration suite also verifies:
+- Default application execution.
+- Zero-customer generation and creation of empty output files.
+- Generation of 53 customers across six chunks, including a final partial chunk of three customers.
+
+The lower-level reproducibility test and production-path integration test verify different layers of the generation pipeline. Both establish worker-count independence for their tested configuration; neither establishes exhaustive reproducibility for all possible inputs or workloads.
+
 The test held the master seed, customer count, chunk size, reference data, scenario, and maximum in-flight count constant while changing worker parallelism from 1 to 4. All five JSONL output files were byte-for-byte identical.
 
 This verifies the tested configuration; it does not establish exhaustive reproducibility across all possible generation inputs or execution settings.
@@ -272,33 +285,62 @@ The configuration enforces the following constraints:
 
 Recheck the current configuration implementation before treating these values as an exhaustive description of all supported options.
 
+
 ## 6. Latest reported verification
 
-The latest supplied test output for the tested working tree reported:
+The latest supplied full-suite test output for the tested working tree reported:
 
 | Measure | Result |
 |---|---:|
-| Tests run | 101 |
+| Tests run | 104 |
 | Suites completed | 30 |
-| Tests succeeded | 101 |
+| Tests succeeded | 104 |
 | Tests failed | 0 |
 | Suites aborted | 0 |
 
-Verification commands:
+Verification:
 
-- `sbt "testOnly com.shopsphere.datagen.common.parallel.ParallelGenerationReproducibilityTest"` — 1 test passed.
-- `sbt "Test / testOnly *"` — 101 tests passed across 30 suites.
+- `MainIntegrationTest`: 4 tests passed.
+- Full SBT test suite: 104 tests passed across 30 suites, zero failures.
+- Full-suite command: `sbt "Test / testOnly *"`
 
-The reproducibility test compared all five JSONL output files byte-for-byte using:
-- Master seed: `42`
-- Total customers: `53`
-- Chunk size: `10`
-- Run A: parallelism `1`, max in-flight `8`
-- Run B: parallelism `4`, max in-flight `8`
+### Production-path integration coverage
 
-The exact Git revision at test time was `62bf6fae2c923b331ed12314497757b7ff4c2153`. The reproducibility test was present as an untracked file and was not part of that commit.
+`MainIntegrationTest` exercises the application generation pipeline with an injectable `GenerationRunConfig`.
 
-This establishes that the tested working tree passed the reported test run. It does not establish reproducibility for every possible configuration or workload.
+The integration tests cover:
+
+- Default application execution.
+- Zero customers, with all five JSONL files created empty.
+- Generation of 53 customers using chunk size 10, producing six chunks and a final partial chunk of three customers.
+- Byte-for-byte equality of all five JSONL files when changing parallelism from 1 to 4.
+
+The cross-worker comparison used:
+
+| Parameter | Run A | Run B |
+|---|---:|---:|
+| Master seed | 42 | 42 |
+| Total customers | 53 | 53 |
+| Chunk size | 10 | 10 |
+| Parallelism | 1 | 4 |
+| Max in-flight | 8 | 8 |
+
+The compared files were `customers.jsonl`, `addresses.jsonl`, `orders.jsonl`, `order_items.jsonl`, and `payments.jsonl`.
+
+### Git verification context
+
+The tested working tree was based on:
+
+`ccc7ef9777972845c087f7212c42fc57039e1a04`
+
+At verification time, the following files contained modifications:
+
+- `src/main/scala/com/shopsphere/datagen/Main.scala`
+- `src/test/scala/com/shopsphere/datagen/MainIntegrationTest.scala`
+
+The 104-test result applies to this modified working tree, not to the base commit in isolation. The modifications had not been committed.
+
+This establishes successful execution of the reported test suite for the tested working tree. It does not establish exhaustive reproducibility across all possible configurations, scenarios, or workloads.
 
 Run the complete test suite after subsequent source or configuration changes before making a new verification claim.
 
@@ -333,6 +375,18 @@ This was a point-in-time scan, not a guarantee about external datasets, generate
 ## 8. Historical verification records
 
 The records in this section preserve earlier verification evidence. Test counts refer to the specific working trees tested at the time and are not cumulative counts.
+
+### Cross-worker reproducibility verification — 2026-11-13
+
+An earlier verification run reported:
+
+- `ParallelGenerationReproducibilityTest`: 1 test passed.
+- Full SBT test suite: 101 tests passed across 30 suites, zero failures.
+- Full-suite command: `sbt "Test / testOnly *"`.
+
+The tested working tree was based on revision `62bf6fae2c923b331ed12314497757b7ff4c2153`. The reproducibility test was present as an untracked file and was not part of that commit.
+
+This is historical evidence for the earlier working tree. It is superseded as the latest verification result by the 104-test production-path verification recorded in Section 6.
 
 ### Milestone 1 verification — 2026-10-22
 
@@ -437,7 +491,7 @@ The following items require review or explicit verification before being conside
 - Review lifecycle boundary behavior, including cases where an `asOfDate` precedes registration or another relevant lifecycle boundary.
 - Review behavior for inaccessible output paths and invalid command-line arguments.
 - Expand payment identifier tests if the model supports multiple payments per order in new ways.
-- Recheck the current implementation of deterministic parallel generation and its tests against ADR-0003.
+- Expand reproducibility verification across additional scenarios, chunk sizes, and generation configurations.
 - Verify the `main-gradle` branch independently.
 - Record exact Git revisions and test results for future verification.
 - Evaluate large workloads, resource usage, and generation performance before making production-readiness claims.
