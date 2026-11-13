@@ -172,6 +172,38 @@ The chunk generator tests verify repeatability for the same chunk and master see
 
 Cross-worker-count byte-for-byte output equality should be considered verified only if a test explicitly compares the relevant outputs under different worker counts with all other contract inputs held constant.
 
+### Cross-worker reproducibility verification — 2026-11-13
+
+**Status: Verified for the tested configuration.**
+
+`ParallelGenerationReproducibilityTest` compares the byte contents of all five generated JSONL files while varying worker parallelism and keeping the other tested reproducibility inputs constant.
+
+| Parameter | Run A | Run B |
+|---|---:|---:|
+| Master seed | 42 | 42 |
+| Total customers | 53 | 53 |
+| Chunk size | 10 | 10 |
+| Parallelism | 1 | 4 |
+| Max in-flight | 8 | 8 |
+
+The following files were compared byte-for-byte:
+- `customers.jsonl`
+- `addresses.jsonl`
+- `orders.jsonl`
+- `order_items.jsonl`
+- `payments.jsonl`
+
+All comparisons passed.
+
+Verification:
+- Focused reproducibility test: 1 passed.
+- Full SBT test suite: 101 tests passed across 30 suites, zero failures.
+- Full-suite command: `sbt "Test / testOnly *"`
+
+The test was run against baseline revision `62bf6fae2c923b331ed12314497757b7ff4c2153`, with the reproducibility test present as an untracked working-tree file.
+
+This verifies worker-count independence for the tested configuration. It does not establish exhaustive reproducibility across all possible inputs, chunk sizes, scenarios, or workloads.
+
 ## Related documentation
 
 - [Identifier conventions (ADR-0001)](ADR-0001-identifier-conventions.md)

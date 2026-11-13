@@ -178,6 +178,12 @@ A fixed seed alone does not guarantee identical output under every parallel exec
 
 Implementation of chunked execution and output publication should not be interpreted as proof of every reproducibility or large-scale performance requirement.
 
+Cross-worker reproducibility has now been verified for a specific controlled configuration using `ParallelGenerationReproducibilityTest`.
+
+The test held the master seed, customer count, chunk size, reference data, scenario, and maximum in-flight count constant while changing worker parallelism from 1 to 4. All five JSONL output files were byte-for-byte identical.
+
+This verifies the tested configuration; it does not establish exhaustive reproducibility across all possible generation inputs or execution settings.
+
 ### Milestone 3: Scenario-Based Business Generation
 
 **Status: Implemented**
@@ -272,15 +278,27 @@ The latest supplied test output for the tested working tree reported:
 
 | Measure | Result |
 |---|---:|
-| Tests run | 100 |
-| Suites completed | 29 |
-| Tests succeeded | 100 |
+| Tests run | 101 |
+| Suites completed | 30 |
+| Tests succeeded | 101 |
 | Tests failed | 0 |
 | Suites aborted | 0 |
 
-The exact Git revision tested was not included in that output.
+Verification commands:
 
-This establishes that the tested working tree passed the reported test run. It must not be attributed to a particular commit or assumed to represent the current working tree without further verification.
+- `sbt "testOnly com.shopsphere.datagen.common.parallel.ParallelGenerationReproducibilityTest"` — 1 test passed.
+- `sbt "Test / testOnly *"` — 101 tests passed across 30 suites.
+
+The reproducibility test compared all five JSONL output files byte-for-byte using:
+- Master seed: `42`
+- Total customers: `53`
+- Chunk size: `10`
+- Run A: parallelism `1`, max in-flight `8`
+- Run B: parallelism `4`, max in-flight `8`
+
+The exact Git revision at test time was `62bf6fae2c923b331ed12314497757b7ff4c2153`. The reproducibility test was present as an untracked file and was not part of that commit.
+
+This establishes that the tested working tree passed the reported test run. It does not establish reproducibility for every possible configuration or workload.
 
 Run the complete test suite after subsequent source or configuration changes before making a new verification claim.
 
