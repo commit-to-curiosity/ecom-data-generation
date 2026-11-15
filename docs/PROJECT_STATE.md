@@ -59,6 +59,7 @@ The implementation includes the following areas:
 - `common.config`: configuration loaders and HOCON, JSON, and YAML readers.
 - `common.distribution`: distribution abstractions, uniform and weighted distributions, triangular distributions, and seeded random generation.
 - `common.json`: shared Jackson JSON serialization configuration, including snake_case property naming and ISO date serialization.
+- `common.analysis`: dataset summary analysis and customer-profile statistical summaries over generated JSONL datasets.
 - `common.output`: JSON Lines writing and run output publication.
 - `common.parallel`: chunk planning and bounded parallel execution.
 - `customer`: customer models, configuration, identifier generation, and customer graph generation.
@@ -292,17 +293,29 @@ The latest supplied full-suite test output for the tested working tree reported:
 
 | Measure | Result |
 |---|---:|
-| Tests run | 104 |
-| Suites completed | 30 |
-| Tests succeeded | 104 |
+| Tests run | 123 |
+| Suites completed | 32 |
+| Tests succeeded | 123 |
 | Tests failed | 0 |
 | Suites aborted | 0 |
 
-Verification:
+### Verification
 
-- `MainIntegrationTest`: 4 tests passed.
-- Full SBT test suite: 104 tests passed across 30 suites, zero failures.
-- Full-suite command: `sbt "Test / testOnly *"`
+- Full SBT test suite: 123 tests passed across 32 suites, with zero failures or aborted suites.
+- Full-suite command: `sbt "Test / testFull"`.
+- `sbt test` is not the full-suite command in the current build configuration. It invokes `testQuick` and may report zero tests when there are no tests to run incrementally.
+- `sbt "Test / fullTest"` is not a valid task in the current build configuration.
+
+The full suite includes tests for:
+
+- Customer, address, order, order-item, and payment generation.
+- Configuration and scenario loading.
+- Structural graph validation.
+- Chunk planning and parallel execution.
+- Cross-worker and production-path reproducibility.
+- JSONL output and application integration.
+- Dataset summary analysis.
+- Customer-profile statistical summaries.
 
 ### Production-path integration coverage
 
@@ -312,37 +325,40 @@ The integration tests cover:
 
 - Default application execution.
 - Zero customers, with all five JSONL files created empty.
-- Generation of 53 customers using chunk size 10, producing six chunks and a final partial chunk of three customers.
+- Generation across multiple chunks, including a final partial chunk.
 - Byte-for-byte equality of all five JSONL files when changing parallelism from 1 to 4.
 
-The cross-worker comparison used:
+The cross-worker comparison holds the master seed, customer count, chunk size, reference data, scenario, and maximum in-flight count constant while changing worker parallelism.
 
-| Parameter | Run A | Run B |
-|---|---:|---:|
-| Master seed | 42 | 42 |
-| Total customers | 53 | 53 |
-| Chunk size | 10 | 10 |
-| Parallelism | 1 | 4 |
-| Max in-flight | 8 | 8 |
+This verifies the tested configurations. It does not establish exhaustive reproducibility across all possible inputs, scenarios, or execution settings.
 
-The compared files were `customers.jsonl`, `addresses.jsonl`, `orders.jsonl`, `order_items.jsonl`, and `payments.jsonl`.
+### Dataset analysis coverage
+
+The new analysis package provides:
+
+- Record counts across the five required JSONL entity files.
+- Total record count with overflow-safe arithmetic.
+- Customer-profile summaries for age, gender, customer status, customer segment, acquisition channel, acquisition campaigns by channel, preferred device, and preferred payment method.
+- Age minimum, maximum, mean, median, and configured age-band frequencies.
+- Category counts and proportions, including zero-count categories.
+- Input validation for malformed JSON, non-object records, missing fields, unknown categories, invalid dates, and inconsistent campaign/channel combinations.
+
+The analyzer reads JSONL records incrementally rather than loading the complete files into memory.
+
+**Integration qualification:** The analysis API can analyze an existing run directory when supplied with an `asOfDate` and age-band definitions. It is not currently wired into the normal generation pipeline or CLI. It does not yet provide order, order-item, product, or payment statistical summaries, and it does not enforce statistical acceptance thresholds.
 
 ### Git verification context
 
-The tested working tree was based on:
+The 123-test result applies to the working tree tested in the latest supplied test output.
 
-`ccc7ef9777972845c087f7212c42fc57039e1a04`
+Do not attribute this result to a commit unless the exact tested Git revision is independently established. Check the current repository using:
 
-At verification time, the following files contained modifications:
+- `git status -sb`
+- `git log -5 --oneline --decorate`
 
-- `src/main/scala/com/shopsphere/datagen/Main.scala`
-- `src/test/scala/com/shopsphere/datagen/MainIntegrationTest.scala`
+The result verifies successful execution of the reported test suite for that tested working tree. It does not establish million-customer-scale performance, statistical realism, or production readiness.
 
-The 104-test result applies to this modified working tree, not to the base commit in isolation. The modifications had not been committed.
-
-This establishes successful execution of the reported test suite for the tested working tree. It does not establish exhaustive reproducibility across all possible configurations, scenarios, or workloads.
-
-Run the complete test suite after subsequent source or configuration changes before making a new verification claim.
+Run `sbt "Test / testFull"` after subsequent source or configuration changes before making a new verification claim.
 
 ## 7. Canonical entity identifier contract
 
@@ -483,34 +499,85 @@ Passing structural validation does not, by itself, establish statistical realism
 
 ## 10. Current known gaps and review items
 
-The following items require review or explicit verification before being considered complete:
+The following items remain open and require implementation, review, or explicit verification:
 
-- Define statistical expectations and acceptance thresholds for scenario-specific distributions.
-- Evaluate whether order counts, basket sizes, product popularity, customer behavior, and payment outcomes are sufficiently realistic.
-- Identify important correlations among customers, products, orders, payments, and time.
+- Define statistical expectations and measurable acceptance thresholds for the customer and business-generation distributions.
+- Extend statistical summaries beyond customer profiles to order cardinality, basket sizes, product popularity, payment outcomes, and payment-attempt counts.
+- Evaluate whether generated distributions and business behavior are sufficiently realistic, rather than merely structurally valid.
+- Identify and model important correlations among customer attributes, products, orders, payments, and time.
 - Review lifecycle boundary behavior, including cases where an `asOfDate` precedes registration or another relevant lifecycle boundary.
 - Review behavior for inaccessible output paths and invalid command-line arguments.
-- Expand payment identifier tests if the model supports multiple payments per order in new ways.
 - Expand reproducibility verification across additional scenarios, chunk sizes, and generation configurations.
 - Verify the `main-gradle` branch independently.
-- Record exact Git revisions and test results for future verification.
-- Evaluate large workloads, resource usage, and generation performance before making production-readiness claims.
+- Benchmark analysis and generation resource usage on large workloads, including the planned 1,000,000-customer scale.
+- Establish evidence for performance and memory behavior before making production-readiness claims.
+- Consider whether statistical analysis should become an optional post-generation command or a separately invoked analysis workflow.
 
 ## 11. Roadmap alignment and next steps
 
-The project roadmap distinguishes the following later milestones.
+The project roadmap distinguishes the following milestones.
 
 ### M4 — Realistic Dataset
 
-**Status: Planned**
+**Status: In Progress**
 
-Planned scope:
+M4 has two complementary objectives:
 
-- Configurable distributions.
-- Configurable cardinality.
-- Long-tail behavior.
-- Important correlations.
-- Statistical validation and measurable acceptance thresholds.
+1. Support controlled synthetic datasets with explicit, configurable distributions and cardinalities.
+2. Support more realistic e-commerce datasets through representative population distributions, business behavior, and meaningful correlations.
+
+The controlled generation behavior must remain available. Realism improvements must preserve the established structural and reproducibility contracts unless a deliberate, documented decision changes them.
+
+#### M4.1 — Statistical Measurement Framework
+
+**Status: Implemented and tested**
+
+M4.1 established the initial dataset analysis framework.
+
+**M4.1.1 — Dataset Summary Analyzer**
+
+Implemented:
+
+- Incremental JSONL reading for the five required entity files.
+- Record counts per entity file.
+- Total record count.
+- Input validation for required files, JSON syntax, and JSON object records.
+- Overflow-safe record counting.
+
+**M4.1.2 — Customer Profile Statistics**
+
+Implemented:
+
+- Customer age statistics: minimum, maximum, mean, and median.
+- Configured age-band counts and proportions.
+- Categorical counts and proportions for gender, customer status, customer segment, acquisition channel, preferred device, and preferred payment method.
+- Conditional acquisition-campaign distributions by acquisition channel.
+- Retention of zero-count categories.
+- Validation of customer profile fields, categories, dates, age bands, and campaign/channel combinations.
+
+The analysis API is tested by the full SBT test suite.
+
+**Integration and scope qualification:**
+
+- The analyzer operates on an existing generated run directory.
+- Customer-profile analysis requires an externally supplied `asOfDate` and age-band definitions.
+- The analysis API is not currently invoked by the normal generation pipeline or CLI.
+- Statistical acceptance thresholds have not been established.
+- Statistical summaries for orders, order items, products, and payments remain outstanding.
+- Million-customer analysis performance has not yet been verified.
+
+#### Remaining M4 work
+
+The following areas remain planned:
+
+- **M4.2 — Customer Population Realism:** Review and improve customer attribute distributions and important conditional relationships.
+- **M4.3 — Variable Transaction Cardinality:** Support configurable order counts per customer and item counts per order, including appropriate distributions.
+- **M4.4 — Product Popularity and Affinity:** Introduce long-tail product popularity and relevant product-selection relationships.
+- **M4.5 — Payment Preferences and Chronology:** Evaluate payment-method preference linkage, payment outcomes, and chronological consistency of payment attempts.
+- **M4.6 — End-to-End Statistical Validation:** Extend statistical summaries, define measurable expectations, and validate generated behavior across scenarios and seeds.
+- **M4.7 — Large-Dataset Verification:** Evaluate generation and analysis at the planned 1,000,000-customer scale, recording runtime and resource usage.
+
+These are planned work areas, not claims of existing implementation.
 
 ### M5 — Scenario Dataset
 
@@ -551,13 +618,15 @@ Planned scope:
 
 ### Immediate next steps
 
-1. Finish reconciling the architecture, data model, project state, and ADRs against the current source, configuration, and tests.
-2. Correct stale statements about milestone status, application wiring, writer class names, command-line behavior, and verification results.
-3. Define measurable M4 acceptance criteria for distributions, cardinality, long-tail behavior, important correlations, and statistical validation.
-4. Establish baseline metrics and statistical expectations before implementing realism changes.
-5. Implement and test M4 incrementally, preserving scenario behavior, structural validation, the documented reproducibility contract, and JSONL output compatibility.
-6. Run the complete SBT test suite after the final source or configuration changes, and record the exact Git revision alongside the results.
-7. Verify the Gradle branch separately if branch parity or Gradle verification is required.
+1. Review the current M4.1 analysis implementation and documentation for consistency.
+2. Extend statistical analysis to order, order-item, product, and payment data.
+3. Define measurable statistical expectations and acceptance thresholds using controlled baseline runs.
+4. Establish baseline metrics across multiple seeds before changing generation distributions or random-number consumption.
+5. Implement M4.2 through M4.5 incrementally, preserving existing scenario behavior, structural validation, reproducibility, and JSONL output compatibility.
+6. Add end-to-end statistical validation and test it across relevant scenarios and seeds.
+7. Benchmark generation and analysis at the planned 1,000,000-customer scale.
+8. Run `sbt "Test / testFull"` after final source or configuration changes, and record the exact Git revision alongside the results.
+9. Verify the Gradle branch separately if branch parity or Gradle verification is required.
 
 Documentation changes should remain separate from unrelated application refactoring. Before committing, review the complete diff, run `git diff --check`, validate Markdown links, and confirm `git status -sb`.
 
