@@ -336,7 +336,7 @@ Milestone 1 remains completed and verified as recorded in Section 7. Phase 2 ext
 
 ## M4.1 — Statistical Measurement Framework
 
-**Status: Ported from `main`; Gradle verification pending.**
+**Status: Ported from `main`; Gradle verification passed.**
 
 ### Dataset Summary Analyzer
 
@@ -369,6 +369,59 @@ Implemented capabilities:
 
 ### Verification status
 
-The M4.1 implementation and tests originated on the SBT branch. Their successful execution on `main` does not establish successful Gradle verification.
+The M4.1 implementation and tests originated on the SBT branch and were successfully ported to `main-gradle`.
 
-Run the Gradle full verification suite after completing this port. Record the actual result and tested Git revision separately.
+Gradle verification:
+
+- Command: `.\gradlew clean check`
+- Result: **119 tests passed across 32 suites; 0 failures and 0 aborted suites.**
+- Build result: `BUILD SUCCESSFUL`.
+- Tested revision: `1115def` (`feat: add dataset statistical analysis framework`).
+- Verification date: 2026-11-17.
+
+This verifies the M4.1 implementation on the Gradle branch. It does not establish million-customer analysis performance or statistical acceptance thresholds.
+## M4.2 — Correlated Customer Generation
+
+**Status: Ported from `main`; Gradle verification pending.**
+
+### Generation strategies
+
+Two customer-generation strategies are supported:
+
+- `independent`: samples customer attributes from their existing marginal distributions. This remains the default.
+- `correlated`: samples selected attributes using conditional distributions.
+
+### Implemented relationships
+
+The correlated strategy introduces these relationships:
+
+- Age band determines customer segment.
+- Age band determines preferred device.
+- Customer segment determines preferred payment method.
+- Acquisition channel determines acquisition campaign through the existing relationship.
+
+### Configuration and validation
+
+- Added `CustomerGenerationConfig` and `CustomerGenerationStrategy`.
+- Added correlation configuration models and a dedicated loader.
+- Added demographic age-band validation.
+- Added validation for conditional probability distributions, age-band coverage, segment coverage, and aggregate segment proportions.
+- Correlated mode requires explicit correlation configuration.
+- HOCON, JSON, and YAML customer configuration examples include generation settings.
+
+### Generation behavior
+
+`CustomerGenerator` selects conditional distributions in correlated mode. Independent mode retains the existing marginal-distribution sampling path.
+
+### Statistical testing and limitations
+
+The implementation on `main` includes a 100,000-customer statistical test using synthetic probability fixtures. This tests configured generation behavior, not empirical population realism.
+
+Outstanding work:
+
+- Calibrate customer distributions using representative population data.
+- Establish statistical acceptance thresholds across multiple seeds.
+- Verify population realism rather than only configured probability behavior.
+- Verify generation performance at the planned 1,000,000-customer scale.
+
+Gradle verification is pending. The successful SBT tests on `main` must not be treated as verification of this Gradle port.

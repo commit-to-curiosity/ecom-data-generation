@@ -13,6 +13,10 @@ object DataGenerationConstants {
   val CUSTOMER_JSON_FILE = "customer.json"
   val CUSTOMER_YAML_FILE = "customer.yaml"
 
+  // Customer generation configuration
+  val GENERATION = "generation"
+  val STRATEGY = "strategy"
+
   // Configuration sections
   val CUSTOMER     = "customer"
   val DEMOGRAPHICS = "demographics"
@@ -34,5 +38,11 @@ object DataGenerationConstants {
   val BEHAVIOR = "behavior"
   val PREFERRED_DEVICE = "preferred_device"
   val PREFERRED_PAYMENT_METHOD = "preferred_payment_method"
+
+  // Customer correlation configuration
+  val CORRELATIONS = "correlations"
+  val SEGMENT_BY_AGE_BAND = "segment_by_age_band"
+  val PREFERRED_DEVICE_BY_AGE_BAND = "preferred_device_by_age_band"
+  val PREFERRED_PAYMENT_METHOD_BY_SEGMENT = "preferred_payment_method_by_segment"
 
 }
