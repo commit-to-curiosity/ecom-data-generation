@@ -6,5 +6,6 @@ case class CustomerConfig(
                            segment: CustomerSegmentConfig,
                            status: CustomerStatusConfig,
                            acquisition: CustomerAcquisitionConfig,
-                           behavior: CustomerBehaviorConfig
+                           behavior: CustomerBehaviorConfig,
+                           generation: CustomerGenerationConfig = CustomerGenerationConfig()
                          )

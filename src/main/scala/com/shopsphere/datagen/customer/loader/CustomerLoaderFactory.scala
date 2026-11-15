@@ -33,13 +33,16 @@ object CustomerLoaderFactory {
       preferredPaymentMethodLoader
     )
 
+    val generationLoader = new CustomerGenerationLoader()
+
     new CustomerConfigLoader(
       demographicsLoader,
       lifecycleLoader,
       segmentLoader,
       statusLoader,
       acquisitionLoader,
-      behaviorLoader
+      behaviorLoader,
+      generationLoader
     )
   }
 }

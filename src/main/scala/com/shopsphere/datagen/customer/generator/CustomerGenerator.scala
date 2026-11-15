@@ -1,14 +1,31 @@
+
 package com.shopsphere.datagen.customer.generator
 
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicLong
-import com.shopsphere.datagen.common.distribution.{RandomGenerator, UniformDistribution, WeightedDistribution}
+
+import com.shopsphere.datagen.common.distribution.{
+  RandomGenerator,
+  UniformDistribution,
+  WeightedDistribution
+}
 import com.shopsphere.datagen.common.generator.Generator
-import com.shopsphere.datagen.customer.config.CustomerAgeBandConfig
-import com.shopsphere.datagen.customer.config.CustomerConfig
+import com.shopsphere.datagen.common.enums.{
+  CustomerAcquisitionCampaign,
+  CustomerAcquisitionChannel,
+  CustomerSegment,
+  CustomerStatus,
+  Gender,
+  PreferredDevice,
+  PreferredPaymentMethod
+}
+import com.shopsphere.datagen.customer.config.{
+  CustomerAgeBandConfig,
+  CustomerConfig,
+  CustomerGenerationStrategy
+}
 import com.shopsphere.datagen.customer.model.Customer
-import com.shopsphere.datagen.common.enums.{CustomerAcquisitionCampaign, CustomerAcquisitionChannel, CustomerSegment, CustomerStatus, Gender, PreferredDevice, PreferredPaymentMethod}
 
 class CustomerGenerator(
                          customerConfig: CustomerConfig,
@@ -107,9 +124,75 @@ class CustomerGenerator(
       randomGenerator
     )
 
+  private val correlationConfig =
+    if (customerConfig.generation.strategy == CustomerGenerationStrategy.CORRELATED) {
+      Some(
+        customerConfig.generation.correlations.getOrElse(
+          throw new IllegalArgumentException(
+            "Correlations configuration is required for correlated generation"
+          )
+        )
+      )
+    } else {
+      None
+    }
+
+  private val segmentDistributionsByAgeBand:
+    Map[(Int, Int), WeightedDistribution[CustomerSegment]] =
+    correlationConfig.toSeq
+      .flatMap(_.segmentByAgeBand)
+      .map { config =>
+        (config.minAge, config.maxAge) ->
+          new WeightedDistribution[CustomerSegment](
+            Seq(
+              CustomerSegment.STANDARD -> config.standard,
+              CustomerSegment.PREMIUM -> config.premium,
+              CustomerSegment.VIP -> config.vip,
+              CustomerSegment.BUSINESS -> config.business
+            ),
+            randomGenerator
+          )
+      }
+      .toMap
+
+  private val deviceDistributionsByAgeBand:
+    Map[(Int, Int), WeightedDistribution[PreferredDevice]] =
+    correlationConfig.toSeq
+      .flatMap(_.preferredDeviceByAgeBand)
+      .map { config =>
+        (config.minAge, config.maxAge) ->
+          new WeightedDistribution[PreferredDevice](
+            Seq(
+              PreferredDevice.MOBILE -> config.mobile,
+              PreferredDevice.DESKTOP -> config.desktop,
+              PreferredDevice.TABLET -> config.tablet
+            ),
+            randomGenerator
+          )
+      }
+      .toMap
+
+  private val paymentDistributionsBySegment:
+    Map[CustomerSegment, WeightedDistribution[PreferredPaymentMethod]] =
+    correlationConfig.toSeq
+      .flatMap(_.preferredPaymentMethodBySegment)
+      .map { config =>
+        config.segment ->
+          new WeightedDistribution[PreferredPaymentMethod](
+            Seq(
+              PreferredPaymentMethod.UPI -> config.upi,
+              PreferredPaymentMethod.CREDIT_CARD -> config.creditCard,
+              PreferredPaymentMethod.DEBIT_CARD -> config.debitCard,
+              PreferredPaymentMethod.NET_BANKING -> config.netBanking,
+              PreferredPaymentMethod.WALLET -> config.wallet
+            ),
+            randomGenerator
+          )
+      }
+      .toMap
+
   override def generate(): Customer =
     generate(nextCustomerId.getAndIncrement())
-
 
   def generate(ordinal: Long): Customer = {
     val customerId = CustomerIdGenerator.generate(ordinal)
@@ -117,6 +200,7 @@ class CustomerGenerator(
     val lastName = identityGenerator.generateLastName()
     val email = identityGenerator.generateEmail(firstName, lastName)
     val phone = identityGenerator.generatePhone()
+
     val gender = genderDistribution.sample()
     val ageBand = ageBandDistribution.sample()
     val age = generateAge(ageBand)
@@ -126,11 +210,60 @@ class CustomerGenerator(
     val registrationDate = generateRegistrationDate(asOfDate)
 
     val customerStatus = customerStatusDistribution.sample()
-    val customerSegment = customerSegmentDistribution.sample()
+
+    val customerSegment =
+      customerConfig.generation.strategy match {
+        case CustomerGenerationStrategy.INDEPENDENT =>
+          customerSegmentDistribution.sample()
+
+        case CustomerGenerationStrategy.CORRELATED =>
+          segmentDistributionsByAgeBand
+            .get(ageBand.minAge -> ageBand.maxAge)
+            .getOrElse {
+              throw new IllegalStateException(
+                s"Missing segment distribution for age band " +
+                  s"${ageBand.minAge}-${ageBand.maxAge}"
+              )
+            }
+            .sample()
+      }
+
     val acquisitionChannel = acquisitionChannelDistribution.sample()
     val acquisitionCampaign = generateAcquisitionCampaign(acquisitionChannel)
-    val preferredDevice = preferredDeviceDistribution.sample()
-    val preferredPaymentMethod = preferredPaymentMethodDistribution.sample()
+
+    val preferredDevice =
+      customerConfig.generation.strategy match {
+        case CustomerGenerationStrategy.INDEPENDENT =>
+          preferredDeviceDistribution.sample()
+
+        case CustomerGenerationStrategy.CORRELATED =>
+          deviceDistributionsByAgeBand
+            .get(ageBand.minAge -> ageBand.maxAge)
+            .getOrElse {
+              throw new IllegalStateException(
+                s"Missing device distribution for age band " +
+                  s"${ageBand.minAge}-${ageBand.maxAge}"
+              )
+            }
+            .sample()
+      }
+
+    val preferredPaymentMethod =
+      customerConfig.generation.strategy match {
+        case CustomerGenerationStrategy.INDEPENDENT =>
+          preferredPaymentMethodDistribution.sample()
+
+        case CustomerGenerationStrategy.CORRELATED =>
+          paymentDistributionsBySegment
+            .get(customerSegment)
+            .getOrElse {
+              throw new IllegalStateException(
+                s"Missing payment distribution for segment " +
+                  customerSegment.name
+              )
+            }
+            .sample()
+      }
 
     Customer(
       id = customerId,

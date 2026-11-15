@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-11-14
+**Last updated:** 2026-11-15
 
 ## Verification and evidence policy
 
@@ -293,15 +293,15 @@ The latest supplied full-suite test output for the tested working tree reported:
 
 | Measure | Result |
 |---|---:|
-| Tests run | 123 |
-| Suites completed | 32 |
-| Tests succeeded | 123 |
+| Tests run | 153 |
+| Suites completed | 34 |
+| Tests succeeded | 153 |
 | Tests failed | 0 |
 | Suites aborted | 0 |
 
 ### Verification
 
-- Full SBT test suite: 123 tests passed across 32 suites, with zero failures or aborted suites.
+- Full SBT test suite: 153 tests passed across 34 suites, with zero failures or aborted suites.
 - Full-suite command: `sbt "Test / testFull"`.
 - `sbt test` is not the full-suite command in the current build configuration. It invokes `testQuick` and may report zero tests when there are no tests to run incrementally.
 - `sbt "Test / fullTest"` is not a valid task in the current build configuration.
@@ -316,6 +316,12 @@ The full suite includes tests for:
 - JSONL output and application integration.
 - Dataset summary analysis.
 - Customer-profile statistical summaries.
+- Customer generation strategies: independent and correlated.
+- Demographic age-band and conditional probability validation.
+- Customer attribute correlation and aggregate segment-proportion preservation.
+- Correlated customer generation statistical verification over 100,000 generated customers.
+- Customer configuration parity across HOCON, JSON, and YAML.
+- Independent and correlated strategy loading across all three configuration formats.
 
 ### Production-path integration coverage
 
@@ -349,7 +355,7 @@ The analyzer reads JSONL records incrementally rather than loading the complete 
 
 ### Git verification context
 
-The 123-test result applies to the working tree tested in the latest supplied test output.
+The 153-test result applies to the working tree tested on 2026-11-15. The tested working tree included uncommitted M4.2 customer-generation changes.
 
 Do not attribute this result to a commit unless the exact tested Git revision is independently established. Check the current repository using:
 
@@ -402,7 +408,7 @@ An earlier verification run reported:
 
 The tested working tree was based on revision `62bf6fae2c923b331ed12314497757b7ff4c2153`. The reproducibility test was present as an untracked file and was not part of that commit.
 
-This is historical evidence for the earlier working tree. It is superseded as the latest verification result by the 104-test production-path verification recorded in Section 6.
+This is historical evidence for the earlier working tree. It is superseded as the latest verification result by the 153-test full-suite verification recorded in Section 6.
 
 ### Milestone 1 verification — 2026-10-22
 
@@ -566,11 +572,74 @@ The analysis API is tested by the full SBT test suite.
 - Statistical summaries for orders, order items, products, and payments remain outstanding.
 - Million-customer analysis performance has not yet been verified.
 
+
+#### M4.2 — Customer Population Realism
+
+**Status: Partially implemented and tested**
+
+M4.2 introduces configurable customer-generation strategies while preserving the existing independent-generation behavior.
+
+Two strategies are supported:
+
+- `independent`: customer attributes are sampled from their existing marginal distributions, retaining the existing generation behavior.
+- `correlated`: selected customer attributes are sampled from conditional distributions that model configured relationships.
+
+**Implemented relationships:**
+
+The correlated strategy supports the following dependency structure:
+
+```text
+Age band
+ ├──> Customer segment
+ └──> Preferred device
+
+Customer segment
+ └──> Preferred payment method
+
+Acquisition channel
+ └──> Acquisition campaign (existing relationship)
+```
+
+**Configuration and validation:**
+
+- Added `CustomerGenerationStrategy` with `independent` and `correlated` strategies.
+- Added `CustomerGenerationConfig` to customer configuration.
+- Added correlation configuration models and a loader.
+- Correlated generation requires an explicit correlation configuration.
+- Missing generation configuration defaults to `independent`.
+- Demographic age bands are validated for non-empty ranges, valid boundaries, contiguous coverage, and valid population weights.
+- Conditional distributions are validated for finite, non-negative probabilities and normalized probability totals.
+- Correlation age-band definitions must match the configured demographic age bands.
+- Every customer segment must have a preferred-payment-method distribution.
+- The weighted aggregate customer-segment proportions must preserve the existing configured marginal proportions.
+- HOCON, JSON, and YAML customer configuration resources define equivalent customer-generation settings.
+- Configuration tests verify equivalent loaded customer configurations and correlated-mode support across all three formats.
+
+**Generation and verification:**
+
+- `CustomerGenerator` selects conditional distributions when correlated mode is active.
+- Existing marginal distributions remain available in independent mode.
+- Correlated generation is tested for deterministic output with a fixed seed.
+- A 100,000-customer test checks age-band proportions, aggregate segment proportions, conditional segment proportions, device preferences, and payment preferences.
+- Configuration tests cover valid and invalid correlation definitions and demographic age-band validation.
+- The independent strategy is tested through the configuration-loading path, including rejection of invalid demographic age ranges.
+
+**Scope qualifications:**
+
+- The 100,000-customer test uses deliberately synthetic conditional probability fixtures. It verifies implementation behavior, not empirical market realism.
+- The existing aggregate segment proportions are preserved by validation; this does not establish that the conditional distributions are representative of a real customer population.
+- No external population dataset or empirical evidence has yet been used to calibrate age, segment, device, or payment-method probabilities.
+- Statistical acceptance thresholds across multiple seeds and production-scale workloads remain outstanding.
+- The correlated strategy is configurable; the default remains `independent`.
+- `Main.scala` currently selects HOCON. JSON and YAML reader and customer-loader parity is tested, but runtime format selection through the application entry point is not yet integrated.
+
+M4.2 therefore has an implemented correlation-generation foundation, but population calibration and broader statistical validation remain open.
+
 #### Remaining M4 work
 
 The following areas remain planned:
 
-- **M4.2 — Customer Population Realism:** Review and improve customer attribute distributions and important conditional relationships.
+- **M4.2 — Customer Population Realism:** Calibrate the implemented conditional distributions using representative population data, assess the realism of customer attribute relationships, and establish statistical acceptance criteria.
 - **M4.3 — Variable Transaction Cardinality:** Support configurable order counts per customer and item counts per order, including appropriate distributions.
 - **M4.4 — Product Popularity and Affinity:** Introduce long-tail product popularity and relevant product-selection relationships.
 - **M4.5 — Payment Preferences and Chronology:** Evaluate payment-method preference linkage, payment outcomes, and chronological consistency of payment attempts.
@@ -618,11 +687,11 @@ Planned scope:
 
 ### Immediate next steps
 
-1. Review the current M4.1 analysis implementation and documentation for consistency.
-2. Extend statistical analysis to order, order-item, product, and payment data.
-3. Define measurable statistical expectations and acceptance thresholds using controlled baseline runs.
-4. Establish baseline metrics across multiple seeds before changing generation distributions or random-number consumption.
-5. Implement M4.2 through M4.5 incrementally, preserving existing scenario behavior, structural validation, reproducibility, and JSONL output compatibility.
+1. Calibrate M4.2 customer age, segment, device, and payment-method distributions using representative population data where available.
+2. Define measurable statistical expectations and acceptance thresholds for customer distributions and conditional relationships.
+3. Establish baseline metrics across multiple seeds and compare independent and correlated generation modes.
+4. Extend statistical analysis to order, order-item, product, and payment data.
+5. Implement M4.3 through M4.5 incrementally, preserving existing scenario behavior, structural validation, reproducibility, and JSONL output compatibility.
 6. Add end-to-end statistical validation and test it across relevant scenarios and seeds.
 7. Benchmark generation and analysis at the planned 1,000,000-customer scale.
 8. Run `sbt "Test / testFull"` after final source or configuration changes, and record the exact Git revision alongside the results.
