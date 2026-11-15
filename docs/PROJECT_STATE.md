@@ -18,8 +18,8 @@ Current repository state at the latest verification:
 - Branch: `main`.
 - Identifier implementation commit: `bd19e78` (`feat: implement hierarchical entity identifiers`).
 - Documentation commits preceding the implementation:
-  - `0293773` — `docs: establish project knowledge baseline`
-  - `7b11129` — `docs: accept hierarchical identifier contract`
+  - `0293773` â€” `docs: establish project knowledge baseline`
+  - `7b11129` â€” `docs: accept hierarchical identifier contract`
 - The implementation and test changes were committed separately from the initial documentation decisions.
 - The branch was reported clean after the implementation commit and was three commits ahead of `origin/main` at that point. Recheck Git status before future work; this document update may add another local commit.
 - Local Java version: OpenJDK 17.0.16 (Microsoft build).
@@ -59,12 +59,13 @@ The implementation includes these areas:
 - `Main.scala`: application entry point.
 - `common.json`: shared Jackson JSON mapper with snake_case field naming and ISO date serialization.
 - `common.output`: JSON Lines writer and run output publisher, including record counts and cleanup of temporary output after failures.
+- `common.analysis`: incremental JSONL dataset summary analysis and customer-profile statistical analysis.
 - Address export: enriched address records containing building, society, road, area, city, state, and country information.
 
 Relevant data resources include geography reference JSON, product reference JSON, and configuration examples in `conf/hocon`, `conf/json`, and `conf/yaml`.
 
 ## 5. Canonical entity identifier contract
-Decision: `docs/decisions/ADR-0001-identifier-conventions.md` — Accepted.
+Decision: `docs/decisions/ADR-0001-identifier-conventions.md` â€” Accepted.
 
 The implementation uses the following formats:
 
@@ -132,9 +133,9 @@ The application loads customer configuration, generates the customer, loads and 
 
 Commands executed successfully:
 
-- `sbt compile` — compilation passed.
-- `sbt "Test / testFull"` — 57 tests passed across 20 suites; 0 failures.
-- `sbt run` — application completed successfully.
+- `sbt compile` â€” compilation passed.
+- `sbt "Test / testFull"` â€” 57 tests passed across 20 suites; 0 failures.
+- `sbt run` â€” application completed successfully.
 
 Observed application output:
 
@@ -187,7 +188,7 @@ Verification performed on `main` after the identifier implementation changes:
 
 The test result applies to the implementation working tree that was subsequently committed as `bd19e78`. Rerun the relevant commands after later source changes before claiming the new checkout passes verification.
 
-### Milestone 1 verification — 2026-10-22
+### Milestone 1 verification â€” 2026-10-22
 
 - `sbt compile`: passed.
 - `sbt "Test / testFull"`: 57 tests passed across 20 suites; 0 failures.
@@ -199,7 +200,7 @@ The test result applies to the implementation working tree that was subsequently
 
 The Git revision was not included in the supplied command output. Do not attribute these results to a particular commit until the revision is checked.
 
-### Phase 2 verification — 2026-10-24
+### Phase 2 verification â€” 2026-10-24
 
 - `sbt compile`: passed after the address export changes.
 - `sbt "Test / testFull"`: 67 tests passed across 24 suites; 0 failures.
@@ -331,3 +332,43 @@ The following capabilities are not included in the verified Phase 2 scope:
 Parallel generation must follow ADR-0003, including deterministic chunk planning, seed derivation, bounded execution, and reproducible output ordering.
 
 Milestone 1 remains completed and verified as recorded in Section 7. Phase 2 extends that baseline without retroactively changing Milestone 1's scope or verification claims.
+
+
+## M4.1 — Statistical Measurement Framework
+
+**Status: Ported from `main`; Gradle verification pending.**
+
+### Dataset Summary Analyzer
+
+Implemented capabilities:
+
+- Incremental JSONL reading for the five entity files.
+- Record counts for customers, addresses, orders, order items, and payments.
+- Total record count with overflow-safe arithmetic.
+- Validation of required files, JSON syntax, and JSON object records.
+
+### Customer Profile Statistics
+
+Implemented capabilities:
+
+- Customer age minimum, maximum, mean, and median.
+- Configurable age-band counts and proportions.
+- Categorical counts and proportions for gender, customer status, customer segment, acquisition channel, preferred device, and preferred payment method.
+- Acquisition-campaign distributions conditional on acquisition channel.
+- Retention of zero-count categories.
+- Validation of required fields, categories, dates, age bands, and campaign/channel combinations.
+
+### Integration and limitations
+
+- Analysis operates on an existing generated run directory.
+- Customer-profile analysis requires an externally supplied `asOfDate` and age-band definitions.
+- The analysis API is not wired into the normal generation pipeline or CLI.
+- Statistical acceptance thresholds have not been established.
+- Statistical summaries for orders, order items, products, and payments remain outstanding.
+- Million-customer analysis performance has not been verified.
+
+### Verification status
+
+The M4.1 implementation and tests originated on the SBT branch. Their successful execution on `main` does not establish successful Gradle verification.
+
+Run the Gradle full verification suite after completing this port. Record the actual result and tested Git revision separately.
