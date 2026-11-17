@@ -382,7 +382,17 @@ Gradle verification:
 This verifies the M4.1 implementation on the Gradle branch. It does not establish million-customer analysis performance or statistical acceptance thresholds.
 ## M4.2 — Correlated Customer Generation
 
-**Status: Ported from `main`; Gradle verification pending.**
+**Status: Ported from `main`; Gradle verification passed.**
+
+### Gradle verification
+
+- Command: `.\gradlew clean check`
+- Result: **149 tests passed across 34 suites; 0 failures and 0 aborted suites.**
+- Build result: `BUILD SUCCESSFUL`.
+- Tested revision: `4793da1` (`feat: add correlated customer generation`).
+- Verification date: 2026-11-17.
+
+This verifies the M4.2 implementation on `main-gradle`. It does not establish empirical population calibration or million-customer performance.
 
 ### Generation strategies
 
